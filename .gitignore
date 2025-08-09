@@ -39,3 +39,32 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+# ESLint cache
+.eslintcache
+
+# Prettier cache
+.prettiercache
+
+# Turbopack (Next.js bundler)
+.turbo/
+
+# VSCode settings
+.vscode/
+
+# Optional npm cache
+.npm/
+
+# Optional yarn v2 cache
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+
+# Config files
+.prettierrc
+pnpm-lock.yaml
+pnpm-workspace.yaml
+tailwind.config.js
+
+# Test files
+src/app/test.js
