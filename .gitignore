@@ -68,3 +68,4 @@ tailwind.config.js
 
 # Test files
 src/app/test.js
+.env*

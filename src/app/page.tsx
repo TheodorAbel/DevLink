@@ -1,9 +1,26 @@
-export default function Home() {
+'use client'
+
+import { useEffect, useState } from 'react'
+import { supabase } from '@/lib/supabaseClient'
+
+export default function TestPage() {
+  const [data, setData] = useState<any[]>([])
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const { data, error } = await supabase.from('jobs').select('*')
+      console.log('Data:', data)
+      console.log('Error:', error)
+      if (data) setData(data)
+    }
+
+    fetchData()
+  }, [])
+
   return (
-    <main className="min-h-screen bg-gradient-to-r from-purple-600 to-pink-500 flex items-center justify-center">
-      <h1 className="text-white text-4xl font-bold underline">
-        Tailwind is working!
-      </h1>
-    </main>
-  );
+    <div>
+      <h1>Supabase Test</h1>
+      <pre>{JSON.stringify(data, null, 2)}</pre>
+    </div>
+  )
 }
