@@ -9,14 +9,14 @@ export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
-  const [role, setRole] = useState<Role>("seeker");
+  const [role, setRole] = useState<Role>(ROLES.SEEKER);
   const [loading, setLoading] = useState(false);
 const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
   setLoading(true);
 
   try {
-    const { user, error } = await signUp(email, password, role, name);
+    const {error } = await signUp(email, password, role, name);
 
     if (error) {
       console.error("Supabase returned an error:", error);

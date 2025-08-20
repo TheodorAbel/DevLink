@@ -25,14 +25,14 @@ export default function ForgotPasswordPage() {
 
   return (
     <main className="max-w-md mx-auto mt-10 p-6 bg-white rounded shadow">
-      <h1 className="text-2xl font-bold mb-4">Forgot Password</h1>
+      <h1 className="text-2xl font-bold mb-4 text-blue-400">Forgot Password</h1>
       <form onSubmit={handleSubmit} className="space-y-4">
         <input
           type="email"
           placeholder="Enter your email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="w-full border p-2 rounded"
+          className="w-full border p-2 rounded text-blue-400"
           required
         />
         <button
