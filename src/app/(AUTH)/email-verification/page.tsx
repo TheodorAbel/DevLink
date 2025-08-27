@@ -78,7 +78,7 @@ export default function VerifyEmailPage() {
       setTimeout(() => {
         switch (publicUser.role) {
           case ROLES.SEEKER:
-            router.push("/seeker/dashboard");
+            router.push("/seeker");
             break;
           case ROLES.EMPLOYER:
             router.push("/employer/dashboard");

@@ -57,7 +57,7 @@ export default function LoginPage() {
     toast.success("Login successful! Redirecting...");
 
     // 🚀 Redirect based on role
-    if (role === ROLES.SEEKER) router.push("/seeker/dashboard");
+    if (role === ROLES.SEEKER) router.push("/seeker");
     else if (role === ROLES.EMPLOYER) router.push("/employer/dashboard");
     else if (role === ROLES.ADMIN) router.push("/admin/dashboard");
     else toast.error("Unknown role.");

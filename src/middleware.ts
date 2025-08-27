@@ -43,7 +43,7 @@ export async function middleware(req: NextRequest) {
 
   const safePaths = [
     "/email-verification",
-    "/seeker/dashboard",
+    "/seeker",
     "/employer/dashboard",
     "/admin/dashboard",
   ];
