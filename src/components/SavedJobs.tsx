@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import { JobDetail } from './JobDetail';
 import { Card, CardHeader, CardTitle, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -102,7 +103,7 @@ const savedJobsData: Job[] = [
 ];
 
 interface SavedJobsProps {
-  onJobSelect: (jobId: string) => void;
+  onJobSelect?: (jobId: string) => void;
 }
 
 export function SavedJobs({ onJobSelect }: SavedJobsProps) {
@@ -111,6 +112,11 @@ export function SavedJobs({ onJobSelect }: SavedJobsProps) {
   const [sortBy, setSortBy] = useState('newest');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [selectedJobs, setSelectedJobs] = useState<string[]>([]);
+  
+  // State for job detail view
+  const [showJobDetail, setShowJobDetail] = useState(false);
+  const [autoOpenApply, setAutoOpenApply] = useState(false);
+  const [selectedJobDetail, setSelectedJobDetail] = useState<string | null>(null);
 
   // Group jobs by recency
   const recentJobs = jobs.filter(job => {
@@ -179,6 +185,28 @@ export function SavedJobs({ onJobSelect }: SavedJobsProps) {
     setSelectedJobs(selectedJobs.length === sortedJobs.length ? [] : sortedJobs.map(job => job.id));
   };
 
+  // Handle job view (View button and card click)
+  const handleJobView = (jobId: string) => {
+    setAutoOpenApply(false);
+    setShowJobDetail(true);
+    setSelectedJobDetail(jobId);
+    onJobSelect?.(jobId);
+  };
+
+  // Handle job apply (Apply button)
+  const handleJobApply = (jobId: string) => {
+    setAutoOpenApply(true);
+    setShowJobDetail(true);
+    setSelectedJobDetail(jobId);
+    onJobSelect?.(jobId);
+  };
+
+  // Handle back from job detail
+  const handleBackToSavedJobs = () => {
+    setShowJobDetail(false);
+    setAutoOpenApply(false);
+  };
+
   const renderJobCard = (job: Job, index: number) => {
     const isSelected = selectedJobs.includes(job.id);
     
@@ -224,7 +252,7 @@ export function SavedJobs({ onJobSelect }: SavedJobsProps) {
 
           <CardContent 
             className="p-6 pl-12"
-            onClick={() => onJobSelect(job.id)}
+            onClick={() => handleJobView(job.id)}
           >
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
               <div className="flex-1">
@@ -287,7 +315,7 @@ export function SavedJobs({ onJobSelect }: SavedJobsProps) {
                   size="sm"
                   onClick={(e) => {
                     e.stopPropagation();
-                    onJobSelect(job.id);
+                    handleJobView(job.id);
                   }}
                   className="flex-1 lg:flex-none"
                 >
@@ -298,8 +326,7 @@ export function SavedJobs({ onJobSelect }: SavedJobsProps) {
                   size="sm"
                   onClick={(e) => {
                     e.stopPropagation();
-                    // Apply logic here
-                    toast.success('Application started!');
+                    handleJobApply(job.id);
                   }}
                   className="flex-1 lg:flex-none bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
                 >
@@ -323,6 +350,10 @@ export function SavedJobs({ onJobSelect }: SavedJobsProps) {
       </motion.div>
     );
   };
+
+  if (showJobDetail) {
+    return <JobDetail onBack={handleBackToSavedJobs} autoOpenApply={autoOpenApply} jobId={selectedJobDetail} />;
+  }
 
   return (
     <div className="min-h-screen relative">

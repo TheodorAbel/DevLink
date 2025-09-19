@@ -5,6 +5,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Switch } from './ui/switch';
+import { useTheme } from '../lib/theme-context';
 import { 
   Settings as SettingsIcon,
   Palette,
@@ -47,8 +48,9 @@ interface SettingsProps {
 }
 
 export function Settings({ onBack }: SettingsProps) {
+  const { theme, setTheme } = useTheme();
+  
   const [settings, setSettings] = useState({
-    theme: 'system',
     autoAttachResume: true,
     defaultCoverLetter: false,
     emailNotifications: {
@@ -176,8 +178,8 @@ export function Settings({ onBack }: SettingsProps) {
                         ].map(({ value, label, icon: Icon }) => (
                           <Button
                             key={value}
-                            variant={settings.theme === value ? 'default' : 'outline'}
-                            onClick={() => updateTopLevelSetting('theme', value)}
+                            variant={theme === value ? 'default' : 'outline'}
+                            onClick={() => setTheme(value)}
                             className="h-16 flex-col gap-2"
                           >
                             <Icon className="h-5 w-5" />

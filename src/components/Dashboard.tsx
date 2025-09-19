@@ -127,6 +127,18 @@ export function Dashboard({ onPageChange }: DashboardProps) {
     }
   };
 
+  const handleProfileStepClick = (stepId: string) => {
+    // Map step ids to ProfileEdit tabs
+    const map: Record<string, string> = {
+      basic: 'personal',
+      experience: 'experience',
+      resume: 'resume',
+      contact: 'personal',
+    };
+    const tab = map[stepId] || 'personal';
+    onPageChange?.(`profile:${tab}`);
+  };
+
   return (
     <div className="min-h-screen relative">
       <AnimatedBackground variant="gradient" />
@@ -156,7 +168,7 @@ export function Dashboard({ onPageChange }: DashboardProps) {
               transition={{ delay: 0.1 }}
               className="grid grid-cols-1 sm:grid-cols-3 gap-4"
             >
-              <Card className="relative overflow-hidden">
+              <Card className="relative overflow-hidden cursor-pointer" onClick={() => onPageChange?.('applications')}>
                 <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-blue-100/30" />
                 <CardContent className="p-4 relative">
                   <div className="flex items-center justify-between">
@@ -169,7 +181,7 @@ export function Dashboard({ onPageChange }: DashboardProps) {
                 </CardContent>
               </Card>
 
-              <Card className="relative overflow-hidden">
+              <Card className="relative overflow-hidden cursor-pointer" onClick={() => onPageChange?.('applications')}>
                 <div className="absolute inset-0 bg-gradient-to-br from-green-50 to-green-100/30" />
                 <CardContent className="p-4 relative">
                   <div className="flex items-center justify-between">
@@ -182,7 +194,7 @@ export function Dashboard({ onPageChange }: DashboardProps) {
                 </CardContent>
               </Card>
 
-              <Card className="relative overflow-hidden">
+              <Card className="relative overflow-hidden cursor-pointer" onClick={() => onPageChange?.('applications')}>
                 <div className="absolute inset-0 bg-gradient-to-br from-purple-50 to-purple-100/30" />
                 <CardContent className="p-4 relative">
                   <div className="flex items-center justify-between">
@@ -284,7 +296,7 @@ export function Dashboard({ onPageChange }: DashboardProps) {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2 }}
             >
-              <ProfileProgress />
+              <ProfileProgress onStepClick={handleProfileStepClick} />
             </motion.div>
 
             {/* Saved Jobs Preview */}
@@ -347,7 +359,8 @@ export function Dashboard({ onPageChange }: DashboardProps) {
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.1 * index }}
-                      className="flex items-center justify-between p-3 bg-white/50 rounded-lg border border-gray-100"
+                      className="flex items-center justify-between p-3 bg-white/50 rounded-lg border border-gray-100 cursor-pointer"
+                      onClick={() => onPageChange?.('applications')}
                     >
                       <div>
                         <h4 className="font-medium text-sm">{app.position}</h4>

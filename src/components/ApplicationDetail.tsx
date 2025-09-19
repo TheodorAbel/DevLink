@@ -26,6 +26,7 @@ import { toast } from 'sonner';
 
 interface ApplicationDetailProps {
   onBack: () => void;
+  showMessages?: boolean;
 }
 
 // Mock application data
@@ -118,7 +119,7 @@ Sarah Johnson`,
   }
 };
 
-export function ApplicationDetail({ onBack }: ApplicationDetailProps) {
+export function ApplicationDetail({ onBack, showMessages = false }: ApplicationDetailProps) {
   const [showCoverLetter, setShowCoverLetter] = useState(false);
 
   const getStatusColor = (status: string, completed: boolean, current: boolean) => {
@@ -327,57 +328,59 @@ export function ApplicationDetail({ onBack }: ApplicationDetailProps) {
               </Card>
             </motion.div>
 
-            {/* Messages */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-            >
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <MessageSquare className="h-5 w-5" />
-                    Messages from Employer
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {applicationData.messages.map((message, index) => (
-                      <motion.div
-                        key={message.id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.05 * index }}
-                        className={`flex gap-3 ${message.type === 'sent' ? 'flex-row-reverse' : ''}`}
-                      >
-                        <Avatar className="w-8 h-8">
-                          <AvatarFallback className={`text-xs ${
-                            message.type === 'sent' 
-                              ? 'bg-blue-100 text-blue-600' 
-                              : 'bg-gray-100 text-gray-600'
-                          }`}>
-                            {message.avatar}
-                          </AvatarFallback>
-                        </Avatar>
-                        
-                        <div className={`flex-1 max-w-[80%] ${message.type === 'sent' ? 'text-right' : ''}`}>
-                          <div className={`inline-block p-3 rounded-lg ${
-                            message.type === 'sent'
-                              ? 'bg-blue-500 text-white'
-                              : 'bg-gray-100 text-gray-900'
-                          }`}>
-                            <p className="text-sm">{message.message}</p>
+            {/* Messages (optional, default hidden; messaging has its own page) */}
+            {showMessages && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+              >
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <MessageSquare className="h-5 w-5" />
+                      Messages from Employer
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {applicationData.messages.map((message, index) => (
+                        <motion.div
+                          key={message.id}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.05 * index }}
+                          className={`flex gap-3 ${message.type === 'sent' ? 'flex-row-reverse' : ''}`}
+                        >
+                          <Avatar className="w-8 h-8">
+                            <AvatarFallback className={`text-xs ${
+                              message.type === 'sent' 
+                                ? 'bg-blue-100 text-blue-600' 
+                                : 'bg-gray-100 text-gray-600'
+                            }`}>
+                              {message.avatar}
+                            </AvatarFallback>
+                          </Avatar>
+                          
+                          <div className={`flex-1 max-w-[80%] ${message.type === 'sent' ? 'text-right' : ''}`}>
+                            <div className={`inline-block p-3 rounded-lg ${
+                              message.type === 'sent'
+                                ? 'bg-blue-500 text-white'
+                                : 'bg-gray-100 text-gray-900'
+                            }`}>
+                              <p className="text-sm">{message.message}</p>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {message.sender} • {message.timestamp}
+                            </p>
                           </div>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {message.sender} • {message.timestamp}
-                          </p>
-                        </div>
-                      </motion.div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
           </div>
 
           {/* Sidebar */}

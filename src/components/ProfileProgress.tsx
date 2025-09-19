@@ -11,6 +11,11 @@ interface ProfileStep {
   icon: React.ComponentType<{ className?: string }>;
 }
 
+interface ProfileProgressProps {
+  onStepClick?: (stepId: string) => void;
+  completedOverride?: Record<string, boolean>;
+}
+
 const profileSteps: ProfileStep[] = [
   { id: 'basic', label: 'Basic Information', completed: true, icon: User },
   { id: 'experience', label: 'Work Experience', completed: true, icon: Briefcase },
@@ -18,9 +23,13 @@ const profileSteps: ProfileStep[] = [
   { id: 'contact', label: 'Contact Preferences', completed: false, icon: Mail },
 ];
 
-export function ProfileProgress() {
-  const completedSteps = profileSteps.filter(step => step.completed).length;
-  const progressPercentage = (completedSteps / profileSteps.length) * 100;
+export function ProfileProgress({ onStepClick, completedOverride }: ProfileProgressProps) {
+  const effectiveSteps = profileSteps.map((s) => ({
+    ...s,
+    completed: completedOverride?.[s.id] ?? s.completed,
+  }));
+  const completedSteps = effectiveSteps.filter(step => step.completed).length;
+  const progressPercentage = (completedSteps / effectiveSteps.length) * 100;
 
   return (
     <Card className="relative overflow-hidden">
@@ -43,8 +52,8 @@ export function ProfileProgress() {
       <CardContent className="relative space-y-4">
         <div className="space-y-2">
           <div className="flex justify-between text-sm text-muted-foreground">
-            <span>{completedSteps} of {profileSteps.length} completed</span>
-            <span>{profileSteps.length - completedSteps} remaining</span>
+            <span>{completedSteps} of {effectiveSteps.length} completed</span>
+            <span>{effectiveSteps.length - completedSteps} remaining</span>
           </div>
           
           <Progress 
@@ -54,19 +63,21 @@ export function ProfileProgress() {
         </div>
 
         <div className="space-y-3">
-          {profileSteps.map((step, index) => {
+          {effectiveSteps.map((step, index) => {
             const Icon = step.icon;
             return (
-              <motion.div
+              <motion.button
                 key={step.id}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className={`flex items-center gap-3 p-2 rounded-lg transition-all duration-200 ${
+                className={`w-full text-left flex items-center gap-3 p-2 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-300 ${
                   step.completed 
                     ? 'bg-green-50/50 hover:bg-green-100/50' 
                     : 'bg-gray-50/50 hover:bg-gray-100/50'
                 }`}
+                onClick={() => onStepClick?.(step.id)}
+                role="button"
               >
                 <motion.div
                   whileHover={{ scale: 1.1 }}
@@ -93,7 +104,7 @@ export function ProfileProgress() {
                     step.completed ? 'text-green-500' : 'text-gray-400'
                   }`} />
                 </div>
-              </motion.div>
+              </motion.button>
             );
           })}
         </div>

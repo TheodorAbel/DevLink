@@ -41,6 +41,7 @@ import {
 
 interface ProfileEditProps {
   onBack?: () => void;
+  initialTab?: 'personal' | 'skills' | 'experience' | 'education' | 'resume';
 }
 
 // Mock profile data
@@ -94,7 +95,7 @@ const initialProfile = {
   }
 };
 
-export function ProfileEdit({ onBack }: ProfileEditProps) {
+export function ProfileEdit({ onBack, initialTab = 'personal' }: ProfileEditProps) {
   const [profile, setProfile] = useState(initialProfile);
   const [isDragOver, setIsDragOver] = useState(false);
   const [showResumeBuilder, setShowResumeBuilder] = useState(false);
@@ -287,7 +288,7 @@ export function ProfileEdit({ onBack }: ProfileEditProps) {
           </div>
         </motion.div>
 
-        <Tabs defaultValue="personal" className="space-y-6">
+        <Tabs defaultValue={initialTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="personal">Personal</TabsTrigger>
             <TabsTrigger value="skills">Skills</TabsTrigger>

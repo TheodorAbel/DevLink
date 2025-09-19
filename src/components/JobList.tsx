@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { JobCard, Job } from './JobCard';
+import { JobDetail } from './JobDetail';
 import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -35,6 +36,7 @@ import {
   SheetTrigger,
 } from './ui/sheet';
 import { Slider } from './ui/slider';
+import { toast } from 'sonner';
 
 // Mock data
 const mockJobs: Job[] = [
@@ -121,6 +123,15 @@ export function JobList({ onJobSelect }: JobListProps) {
   const [salaryRange, setSalaryRange] = useState([0, 200000]);
   const [showFilters, setShowFilters] = useState(false);
   const [showNotificationPrompt, setShowNotificationPrompt] = useState(true);
+  
+  // New state for job detail view
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const [showJobDetail, setShowJobDetail] = useState(false);
+  const [autoOpenApply, setAutoOpenApply] = useState(false);
+
+  // State for job alert panel
+  const [showJobAlertPanel, setShowJobAlertPanel] = useState(false);
+  const [alertCreated, setAlertCreated] = useState(false);
 
   const filteredJobs = mockJobs.filter(job => {
     const matchesSearch = job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -148,9 +159,41 @@ export function JobList({ onJobSelect }: JobListProps) {
     }
   });
 
+  // Handle job card click to show detail view
+  const handleJobView = (jobId: string) => {
+    setSelectedJobId(jobId);
+    setAutoOpenApply(false);
+    setShowJobDetail(true);
+  };
+
+  // Handle apply button click to show detail view with auto-open apply
+  const handleJobApply = (jobId: string) => {
+    setSelectedJobId(jobId);
+    setAutoOpenApply(true);
+    setShowJobDetail(true);
+  };
+
+  // Handle back from job detail
+  const handleBackToJobs = () => {
+    setShowJobDetail(false);
+    setAutoOpenApply(false);
+    setSelectedJobId(null);
+  };
+
+  // If showing job detail, render JobDetail component
+  if (showJobDetail) {
+    return (
+      <JobDetail
+        jobId={selectedJobId!}
+        onBack={handleBackToJobs}
+        autoOpenApply={autoOpenApply}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen relative">
-      <AnimatedBackground variant="particles" />
+      <AnimatedBackground />
       
       <div className="relative z-10 p-6 max-w-7xl mx-auto">
         {/* Header */}
@@ -345,9 +388,9 @@ export function JobList({ onJobSelect }: JobListProps) {
                   <JobCard
                     job={job}
                     variant={viewMode === 'list' ? 'compact' : 'default'}
-                    onApply={(jobId) => console.log('Apply to', jobId)}
+                    onApply={(jobId) => handleJobApply(jobId)}
                     onSave={(jobId) => console.log('Save', jobId)}
-                    onView={onJobSelect}
+                    onView={(jobId) => handleJobView(jobId)}
                   />
                 </motion.div>
               ))}
@@ -393,7 +436,7 @@ export function JobList({ onJobSelect }: JobListProps) {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.1 * index }}
                         className="p-3 bg-white/50 rounded-lg border border-gray-100 hover:bg-white/80 transition-all cursor-pointer"
-                        onClick={() => onJobSelect(job.id)}
+                        onClick={() => handleJobView(job.id)}
                       >
                         <h4 className="font-medium text-sm line-clamp-1">{job.title}</h4>
                         <p className="text-xs text-muted-foreground">{job.company}</p>
@@ -418,10 +461,40 @@ export function JobList({ onJobSelect }: JobListProps) {
                   <p className="text-sm text-muted-foreground mb-4">
                     Get notified when jobs matching your search are posted
                   </p>
-                  <Button className="w-full bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600">
-                    <Bell className="h-4 w-4 mr-2" />
-                    Create Alert
-                  </Button>
+                  <motion.div
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="relative overflow-hidden rounded-lg"
+                  >
+                    <Button 
+                      className={`w-full relative transition-all duration-300 ${
+                        alertCreated 
+                          ? 'bg-green-600 hover:bg-green-600 cursor-default' 
+                          : 'bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 hover:shadow-lg hover:shadow-green-500/25'
+                      }`}
+                      onClick={() => !alertCreated && setShowJobAlertPanel(true)}
+                      disabled={alertCreated}
+                    >
+                      <motion.div
+                        animate={alertCreated ? {} : { rotate: [0, -10, 10, -10, 0] }}
+                        transition={{ duration: 0.5, repeat: Infinity, repeatDelay: 3 }}
+                        className="mr-2"
+                      >
+                        {alertCreated ? (
+                          <motion.div
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                          >
+                            ✅
+                          </motion.div>
+                        ) : (
+                          <Bell className="h-4 w-4" />
+                        )}
+                      </motion.div>
+                      {alertCreated ? 'Alert Created' : 'Create Alert'}
+                    </Button>
+                  </motion.div>
                 </div>
               </Card>
             </motion.div>

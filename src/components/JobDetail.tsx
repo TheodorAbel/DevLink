@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardHeader, CardTitle, CardContent } from './ui/card';
@@ -28,9 +30,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
+import { ApplySheet } from './ApplySheet';
 
 interface JobDetailProps {
   onBack: () => void;
+  autoOpenApply?: boolean;
 }
 
 // Mock job data
@@ -86,15 +90,14 @@ In this role, you'll work closely with our design and product teams to create ex
   }
 };
 
-export function JobDetail({ onBack }: JobDetailProps) {
+export function JobDetail({ onBack, autoOpenApply = false }: JobDetailProps) {
   const [isApplied, setIsApplied] = useState(false);
+  const [applyOpen, setApplyOpen] = useState(autoOpenApply);
   const [isSaved, setIsSaved] = useState(false);
 
   const handleApply = () => {
-    setIsApplied(true);
-    toast.success('Application submitted successfully! 🎉', {
-      description: 'We\'ll notify you about the status of your application.'
-    });
+    // Open the responsive Apply sheet instead of instant-apply
+    setApplyOpen(true);
   };
 
   const handleSave = () => {
@@ -223,288 +226,272 @@ export function JobDetail({ onBack }: JobDetailProps) {
                       'Apply Now'
                     )}
                   </Button>
-                  
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      onClick={handleSave}
-                      className={`${isSaved ? 'bg-yellow-50 border-yellow-200' : ''}`}
-                    >
-                      <Bookmark className={`h-4 w-4 ${isSaved ? 'fill-yellow-400 text-yellow-400' : ''}`} />
-                    </Button>
-                    
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline">
-                          <Share2 className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-48">
-                        <DropdownMenuItem onClick={() => handleShare('copy')}>
-                          <Copy className="h-4 w-4 mr-2" />
-                          Copy Link
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleShare('email')}>
-                          <Mail className="h-4 w-4 mr-2" />
-                          Share via Email
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleShare('linkedin')}>
-                          <ExternalLink className="h-4 w-4 mr-2" />
-                          Share on LinkedIn
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleShare('whatsapp')}>
-                          <MessageCircle className="h-4 w-4 mr-2" />
-                          Share on WhatsApp
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                    
-                    <Button variant="outline" onClick={handleReport}>
-                      <Flag className="h-4 w-4" />
-                    </Button>
-                  </div>
                 </div>
-              </div>
-              
-              {/* Job Meta Info */}
-              <div className="flex flex-wrap gap-4 mt-6 pt-4 border-t border-gray-200">
-                <div className="text-sm text-muted-foreground">
-                  Posted {jobDetail.postedDate}
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  Application deadline: {jobDetail.applicationDeadline}
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={copyJobDescription}
-                  className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 p-0 h-auto font-normal"
-                >
-                  Copy job description
-                </Button>
               </div>
             </CardContent>
           </Card>
         </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Job Description */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-            >
-              <Card>
-                <CardHeader>
-                  <CardTitle>About the Role</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <p className="text-muted-foreground leading-relaxed">{jobDetail.description}</p>
-                </CardContent>
-              </Card>
-            </motion.div>
+        {/* Apply Sheet (responsive) */}
+        <ApplySheet
+          open={applyOpen}
+          onOpenChange={(o) => setApplyOpen(o)}
+          jobTitle={jobDetail.title}
+          company={jobDetail.company}
+          profileResumeName={'Sarah_Johnson_Resume.pdf'}
+          screeningQuestions={[
+            { id: 'q1', text: 'How many years of React experience do you have?', type: 'short-answer', required: true },
+            { id: 'q2', text: 'Are you comfortable with TypeScript?', type: 'yes-no', required: true },
+            { id: 'q3', text: 'What is your preferred testing framework?', type: 'multiple-choice', options: [
+              { id: 'jest', label: 'Jest', value: 'Jest' },
+              { id: 'rtl', label: 'React Testing Library', value: 'RTL' },
+              { id: 'cypress', label: 'Cypress', value: 'Cypress' },
+            ]},
+            { id: 'q4', text: 'Which frontend technologies are you proficient with?', type: 'checkbox', options: [
+              { id: 'react', label: 'React', value: 'React' },
+              { id: 'next', label: 'Next.js', value: 'Next.js' },
+              { id: 'vue', label: 'Vue', value: 'Vue' },
+              { id: 'svelte', label: 'Svelte', value: 'Svelte' },
+            ]},
+          ]}
+        />
 
-            {/* Responsibilities */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-            >
-              <Card>
-                <CardHeader>
-                  <CardTitle>Key Responsibilities</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-2">
-                    {jobDetail.responsibilities.map((responsibility, index) => (
-                      <motion.li
-                        key={index}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.05 * index }}
-                        className="flex items-start gap-2 text-muted-foreground"
-                      >
-                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-2 flex-shrink-0" />
-                        {responsibility}
-                      </motion.li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-            </motion.div>
+      {/* Job Meta Info */}
+      <div className="flex flex-wrap gap-4 mt-6 pt-4 border-t border-gray-200">
+        <div className="text-sm text-muted-foreground">
+          Posted {jobDetail.postedDate}
+        </div>
+        <div className="text-sm text-muted-foreground">
+          Application deadline: {jobDetail.applicationDeadline}
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={copyJobDescription}
+          className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 p-0 h-auto font-normal"
+        >
+          Copy job description
+        </Button>
+      </div>
 
-            {/* Requirements */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-            >
-              <Card>
-                <CardHeader>
-                  <CardTitle>Requirements</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-2">
-                    {jobDetail.requirements.map((requirement, index) => (
-                      <motion.li
-                        key={index}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.05 * index }}
-                        className="flex items-start gap-2 text-muted-foreground"
-                      >
-                        <div className="w-1.5 h-1.5 bg-purple-500 rounded-full mt-2 flex-shrink-0" />
-                        {requirement}
-                      </motion.li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-            </motion.div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Main Content */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Job Description */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+          >
+            <Card>
+              <CardHeader>
+                <CardTitle>About the Role</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-muted-foreground leading-relaxed">{jobDetail.description}</p>
+              </CardContent>
+            </Card>
+          </motion.div>
 
-            {/* Skills */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-            >
-              <Card>
-                <CardHeader>
-                  <CardTitle>Required Skills</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-wrap gap-2">
-                    {jobDetail.skills.map((skill, index) => (
-                      <motion.div
-                        key={skill}
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: 0.05 * index }}
+          {/* Responsibilities */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <Card>
+              <CardHeader>
+                <CardTitle>Key Responsibilities</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2">
+                  {jobDetail.responsibilities.map((responsibility, index) => (
+                    <motion.li
+                      key={index}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.05 * index }}
+                      className="flex items-start gap-2 text-muted-foreground"
+                    >
+                      <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-2 flex-shrink-0" />
+                      {responsibility}
+                    </motion.li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Requirements */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            <Card>
+              <CardHeader>
+                <CardTitle>Requirements</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2">
+                  {jobDetail.requirements.map((requirement, index) => (
+                    <motion.li
+                      key={index}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.05 * index }}
+                      className="flex items-start gap-2 text-muted-foreground"
+                    >
+                      <div className="w-1.5 h-1.5 bg-purple-500 rounded-full mt-2 flex-shrink-0" />
+                      {requirement}
+                    </motion.li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Skills */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+          >
+            <Card>
+              <CardHeader>
+                <CardTitle>Required Skills</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2">
+                  {jobDetail.skills.map((skill, index) => (
+                    <motion.div
+                      key={skill}
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.05 * index }}
+                    >
+                      <Badge 
+                        variant="secondary" 
+                        className="bg-gradient-to-r from-blue-50 to-purple-50 text-blue-700 border border-blue-200"
                       >
-                        <Badge 
-                          variant="secondary" 
-                          className="bg-gradient-to-r from-blue-50 to-purple-50 text-blue-700 border border-blue-200"
-                        >
-                          {skill}
-                        </Badge>
-                      </motion.div>
-                    ))}
+                        {skill}
+                      </Badge>
+                    </motion.div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </div>
+
+        {/* Sidebar */}
+        <div className="space-y-6">
+          {/* Company Info */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            <Card className="relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-gray-50/50 to-blue-50/30" />
+              <CardHeader className="relative">
+                <CardTitle>About {jobDetail.companyInfo.name}</CardTitle>
+              </CardHeader>
+              <CardContent className="relative space-y-4">
+                <p className="text-sm text-muted-foreground">{jobDetail.companyInfo.description}</p>
+                
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Company size:</span>
+                    <span>{jobDetail.companyInfo.size}</span>
                   </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Company Info */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.3 }}
-            >
-              <Card className="relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-gray-50/50 to-blue-50/30" />
-                <CardHeader className="relative">
-                  <CardTitle>About {jobDetail.companyInfo.name}</CardTitle>
-                </CardHeader>
-                <CardContent className="relative space-y-4">
-                  <p className="text-sm text-muted-foreground">{jobDetail.companyInfo.description}</p>
-                  
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Company size:</span>
-                      <span>{jobDetail.companyInfo.size}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Industry:</span>
-                      <span>{jobDetail.companyInfo.industry}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Founded:</span>
-                      <span>{jobDetail.companyInfo.founded}</span>
-                    </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Industry:</span>
+                    <span>{jobDetail.companyInfo.industry}</span>
                   </div>
-                  
-                  <Button variant="outline" className="w-full" asChild>
-                    <a href={jobDetail.companyInfo.website} target="_blank" rel="noopener noreferrer">
-                      Visit Company Website
-                      <ExternalLink className="h-4 w-4 ml-2" />
-                    </a>
-                  </Button>
-                </CardContent>
-              </Card>
-            </motion.div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Founded:</span>
+                    <span>{jobDetail.companyInfo.founded}</span>
+                  </div>
+                </div>
+                
+                <Button variant="outline" className="w-full" asChild>
+                  <a href={jobDetail.companyInfo.website} target="_blank" rel="noopener noreferrer">
+                    Visit Company Website
+                    <ExternalLink className="h-4 w-4 ml-2" />
+                  </a>
+                </Button>
+              </CardContent>
+            </Card>
+          </motion.div>
 
-            {/* Benefits */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.4 }}
-            >
-              <Card className="relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-green-50/50 to-emerald-50/30" />
-                <CardHeader className="relative">
-                  <CardTitle>Benefits & Perks</CardTitle>
-                </CardHeader>
-                <CardContent className="relative">
-                  <ul className="space-y-2">
-                    {jobDetail.benefits.map((benefit, index) => (
-                      <motion.li
-                        key={index}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.05 * index }}
-                        className="flex items-start gap-2 text-sm text-muted-foreground"
-                      >
-                        <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                        {benefit}
-                      </motion.li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-            </motion.div>
+          {/* Benefits */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.4 }}
+          >
+            <Card className="relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-green-50/50 to-emerald-50/30" />
+              <CardHeader className="relative">
+                <CardTitle>Benefits & Perks</CardTitle>
+              </CardHeader>
+              <CardContent className="relative">
+                <ul className="space-y-2">
+                  {jobDetail.benefits.map((benefit, index) => (
+                    <motion.li
+                      key={index}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.05 * index }}
+                      className="flex items-start gap-2 text-sm text-muted-foreground"
+                    >
+                      <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                      {benefit}
+                    </motion.li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          </motion.div>
 
-            {/* Application CTA */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.5 }}
-            >
-              <Card className="relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-purple-50/40" />
-                <CardContent className="p-6 relative text-center">
-                  <h3 className="font-semibold mb-2">Ready to Apply?</h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Don't miss out on this opportunity. Apply now and take the next step in your career.
-                  </p>
-                  <Button
-                    onClick={handleApply}
-                    disabled={isApplied}
-                    className={`w-full ${
-                      isApplied 
-                        ? 'bg-green-500 hover:bg-green-600' 
-                        : 'bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600'
-                    }`}
-                  >
-                    {isApplied ? (
-                      <>
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        Application Submitted
-                      </>
-                    ) : (
-                      'Apply for this Position'
-                    )}
-                  </Button>
-                </CardContent>
-              </Card>
-            </motion.div>
-          </div>
+          {/* Application CTA */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.5 }}
+          >
+            <Card className="relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-purple-50/40" />
+              <CardContent className="p-6 relative text-center">
+                <h3 className="font-semibold mb-2">Ready to Apply?</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Don't miss out on this opportunity. Apply now and take the next step in your career.
+                </p>
+                <Button
+                  onClick={handleApply}
+                  disabled={isApplied}
+                  className={`w-full ${
+                    isApplied 
+                      ? 'bg-green-500 hover:bg-green-600' 
+                      : 'bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600'
+                  }`}
+                >
+                  {isApplied ? (
+                    <>
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Application Submitted
+                    </>
+                  ) : (
+                    'Apply for this Position'
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
+          </motion.div>
         </div>
       </div>
     </div>
+  </div>
   );
 }
