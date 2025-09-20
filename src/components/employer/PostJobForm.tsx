@@ -9,8 +9,12 @@ import { Switch } from "./ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Separator } from "./ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
-import { X, Plus, Save, Eye, Trash2, Info, HelpCircle } from "lucide-react";
+import { X, Plus, Save, Eye, Trash2, Info, HelpCircle, Calendar as CalendarIcon } from "lucide-react";
 import { toast } from "sonner";
+import { format } from "date-fns";
+import { Calendar } from "./ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+import { cn } from "../../lib/utils";
 
 interface ScreeningQuestion {
   id: string;
@@ -26,11 +30,13 @@ interface JobFormData {
   location: string;
   jobType: string;
   isRemote: boolean;
-  salaryType: 'range' | 'fixed';
+  salaryType: 'range' | 'fixed' | 'custom';
   salary: string;
   salaryMin: string;
   salaryMax: string;
   currency: string;
+  customSalaryMessage: string;
+  deadline: Date | null;
   description: string;
   skills: string[];
   screeningQuestions: ScreeningQuestion[];
@@ -59,6 +65,8 @@ export function PostJobForm({
     salaryMin: '',
     salaryMax: '',
     currency: 'ETB',
+    customSalaryMessage: 'Competitive salary based on experience',
+    deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // Default to 30 days from now
     description: '',
     skills: [],
     screeningQuestions: [],
@@ -253,7 +261,18 @@ export function PostJobForm({
               <Label>Salary Type</Label>
               <Select 
                 value={formData.salaryType} 
-                onValueChange={(value: 'range' | 'fixed') => setFormData(prev => ({ ...prev, salaryType: value }))}
+                onValueChange={(value: 'range' | 'fixed' | 'custom') => {
+                  setFormData(prev => ({
+                    ...prev, 
+                    salaryType: value,
+                    // Clear salary fields when switching to custom message
+                    ...(value === 'custom' ? { 
+                      salary: '',
+                      salaryMin: '',
+                      salaryMax: ''
+                    } : {})
+                  }));
+                }}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -261,11 +280,12 @@ export function PostJobForm({
                 <SelectContent>
                   <SelectItem value="range">Salary Range</SelectItem>
                   <SelectItem value="fixed">Fixed Salary</SelectItem>
+                  <SelectItem value="custom">Custom Salary Message</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            {formData.salaryType === 'range' ? (
+            {formData.salaryType === 'range' && (
               <div className="grid grid-cols-3 gap-2">
                 <div>
                   <Input
@@ -300,7 +320,8 @@ export function PostJobForm({
                   </Select>
                 </div>
               </div>
-            ) : (
+            )}
+            {formData.salaryType === 'fixed' && (
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <Input
@@ -328,6 +349,54 @@ export function PostJobForm({
                 </div>
               </div>
             )}
+
+
+            {formData.salaryType === 'custom' && (
+              <div className="space-y-2">
+                <Label>Custom Salary Message</Label>
+                <Input
+                  value={formData.customSalaryMessage}
+                  onChange={(e) => setFormData(prev => ({ ...prev, customSalaryMessage: e.target.value }))}
+                  placeholder="e.g., Competitive salary, Negotiable based on experience"
+                />
+                <p className="text-xs text-muted-foreground">
+                  This message will be displayed instead of a specific salary range
+                </p>
+              </div>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Application Deadline</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !formData.deadline && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {formData.deadline ? (
+                      format(formData.deadline, "PPP")
+                    ) : (
+                      <span>Pick a date</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={formData.deadline || undefined}
+                    onSelect={(date) => date && setFormData(prev => ({ ...prev, deadline: date }))}
+                    initialFocus
+                    disabled={(date) => date < new Date()}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
           </div>
 
           <div className="space-y-2">
