@@ -34,6 +34,7 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
+  SheetFooter
 } from './ui/sheet';
 import { Slider } from './ui/slider';
 import { toast } from 'sonner';
@@ -132,6 +133,64 @@ export function JobList({ onJobSelect }: JobListProps) {
   // State for job alert panel
   const [showJobAlertPanel, setShowJobAlertPanel] = useState(false);
   const [alertCreated, setAlertCreated] = useState(false);
+
+  // Job Alert form state
+  const [alertTitle, setAlertTitle] = useState("");
+  const [alertLocation, setAlertLocation] = useState<string>("Remote");
+  const [alertTypes, setAlertTypes] = useState<Record<'Full-time' | 'Part-time' | 'Remote', boolean>>({
+    'Full-time': true,
+    'Part-time': false,
+    'Remote': false,
+  });
+  const [frequency, setFrequency] = useState<'Daily' | 'Weekly' | 'Instant'>("Daily");
+  const [delivery, setDelivery] = useState<'Email' | 'SMS' | 'Push'>("Email");
+
+  // Multi-step and saved alerts state
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
+  type AlertItem = {
+    id: string;
+    title: string;
+    location: string;
+    types: string[];
+    frequency: 'Daily' | 'Weekly' | 'Instant';
+    delivery: 'Email' | 'SMS' | 'Push';
+  };
+  const [alerts, setAlerts] = useState<AlertItem[]>([]);
+
+  const atLeastOneType = Object.values(alertTypes).some(Boolean);
+  const isValidStep1 = alertTitle.trim().length > 0 && atLeastOneType;
+  const isValidStep2 = Boolean(frequency) && Boolean(delivery);
+  const isValidAll = isValidStep1 && isValidStep2;
+
+  const resetForm = () => {
+    setAlertTitle("");
+    setAlertLocation("Remote");
+    setAlertTypes({ 'Full-time': true, 'Part-time': false, 'Remote': false });
+    setFrequency("Daily");
+    setDelivery("Email");
+    setCurrentStep(1);
+  };
+
+  const createAlert = () => {
+    if (!isValidAll) return;
+    const item: AlertItem = {
+      id: crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2),
+      title: alertTitle.trim(),
+      location: alertLocation,
+      types: Object.entries(alertTypes).filter(([,v])=>v).map(([k])=>k),
+      frequency,
+      delivery,
+    };
+    setAlerts(prev => [item, ...prev]);
+    setAlertCreated(true);
+    toast.success(`Job Alert created! We'll notify you about new '${item.title}' jobs.`);
+    setTimeout(() => {
+      setShowJobAlertPanel(false);
+      resetForm();
+    }, 1200);
+  };
+
+  const deleteAlert = (id: string) => setAlerts(prev => prev.filter(a => a.id !== id));
 
   const filteredJobs = mockJobs.filter(job => {
     const matchesSearch = job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -462,15 +521,15 @@ export function JobList({ onJobSelect }: JobListProps) {
                     Get notified when jobs matching your search are posted
                   </p>
                   <motion.div
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.98 }}
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
                     className="relative overflow-hidden rounded-lg"
                   >
                     <Button 
-                      className={`w-full relative transition-all duration-300 ${
+                      className={`w-full relative transition-all duration-300 will-change-transform ${
                         alertCreated 
                           ? 'bg-green-600 hover:bg-green-600 cursor-default' 
-                          : 'bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 hover:shadow-lg hover:shadow-green-500/25'
+                          : 'bg-gradient-to-r from-green-600 to-emerald-500 hover:from-green-500 hover:to-green-400 hover:shadow-lg hover:shadow-green-500/25'
                       }`}
                       onClick={() => !alertCreated && setShowJobAlertPanel(true)}
                       disabled={alertCreated}
@@ -501,6 +560,163 @@ export function JobList({ onJobSelect }: JobListProps) {
           </div>
         </div>
       </div>
+
+      {/* Job Alert Modal (Sheet) */}
+      <Sheet open={showJobAlertPanel} onOpenChange={(o) => setShowJobAlertPanel(o)}>
+        <SheetContent side="right" className="bg-white border-l shadow-xl rounded-l-xl p-0 max-w-md sm:max-w-sm">
+          <SheetHeader>
+            <SheetTitle>Create Job Alert</SheetTitle>
+            <SheetDescription>Get notified when new jobs match your preferences.</SheetDescription>
+          </SheetHeader>
+          <div className="px-4 pb-4">
+            {/* Step indicators (interactive) */}
+            <div className="flex items-center gap-3 pt-1 pb-4">
+              {[1,2,3].map((s) => (
+                <button
+                  key={s}
+                  aria-label={`Go to step ${s}`}
+                  className={`size-2.5 rounded-full transition ${currentStep === s ? 'bg-primary scale-110' : 'bg-muted hover:bg-muted-foreground/30'}`}
+                  onClick={() => setCurrentStep(s as 1|2|3)}
+                />
+              ))}
+            </div>
+
+            {/* Steps container: vertical scroll if needed */}
+            <div className="space-y-5 overflow-y-auto pr-1" style={{ maxHeight: 'calc(100vh - 11rem)' }}>
+              {/* Step 1: Basics */}
+              {currentStep === 1 && (
+                <div className="space-y-4">
+                  <div>
+                    <label htmlFor="alert-title" className="text-sm font-medium mb-2 block">Job Title / Keywords</label>
+                    <Input id="alert-title" placeholder="e.g., Frontend Developer" value={alertTitle} onChange={(e) => setAlertTitle(e.target.value)} />
+                    {!alertTitle.trim() && (<p className="text-xs text-red-600 mt-1">Title is required.</p>)}
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Location</label>
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                      <Select value={alertLocation} onValueChange={setAlertLocation}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select location" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Remote">Remote</SelectItem>
+                          <SelectItem value="Addis Ababa">Addis Ababa</SelectItem>
+                          <SelectItem value="San Francisco">San Francisco</SelectItem>
+                          <SelectItem value="New York">New York</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Job Type</label>
+                    <div className="grid grid-cols-2 gap-2 pt-1">
+                      {(['Full-time','Part-time','Remote'] as const).map(t => (
+                        <label key={t} className="flex items-center gap-2 text-sm">
+                          <input type="checkbox" checked={alertTypes[t]} onChange={(e) => setAlertTypes((s) => ({...s, [t]: e.target.checked}))} className="rounded" />
+                          {t}
+                        </label>
+                      ))}
+                    </div>
+                    {!atLeastOneType && (<p className="text-xs text-red-600 mt-1">Select at least one type.</p>)}
+                  </div>
+                </div>
+              )}
+
+              {/* Step 2: Preferences */}
+              {currentStep === 2 && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Notification Frequency</label>
+                    <div className="grid grid-cols-3 gap-2 pt-1">
+                      {(['Daily','Weekly','Instant'] as const).map(f => (
+                        <label key={f} className="flex items-center gap-2 rounded-md border p-2 text-sm cursor-pointer">
+                          <input type="radio" name="frequency" value={f} checked={frequency === f} onChange={(e) => setFrequency(e.target.value as any)} />
+                          <span>{f}</span>
+                        </label>
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {frequency === 'Instant' ? "You'll receive alerts instantly." : frequency === 'Daily' ? "You'll receive alerts once per day." : "You'll receive alerts once per week."}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Delivery Method</label>
+                    <div className="grid grid-cols-3 gap-2 pt-1">
+                      {(['Email','SMS','Push'] as const).map(d => (
+                        <label key={d} className="flex items-center gap-2 rounded-md border p-2 text-sm cursor-pointer">
+                          <input type="radio" name="delivery" value={d} checked={delivery === d} onChange={(e) => setDelivery(e.target.value as any)} />
+                          <span>{d}</span>
+                        </label>
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {delivery === 'Email' ? "We'll send alerts to your signup email." : delivery === 'SMS' ? "SMS will be sent to your verified phone." : "You'll see alerts as push notifications."}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 3: Preview & Manage */}
+              {currentStep === 3 && (
+                <div className="space-y-4">
+                  <div className="pt-1">
+                    <h4 className="font-medium mb-2">Preview of Matching Jobs</h4>
+                    <div className="space-y-2">
+                      {mockJobs.slice(0, 3).map((job) => (
+                        <div key={job.id} className="rounded-md border p-3">
+                          <div className="font-medium text-sm">{job.title}</div>
+                          <div className="text-xs text-muted-foreground">{job.company} • {job.location} • {job.type}</div>
+                        </div>
+                      ))}
+                      {mockJobs.length === 0 && (
+                        <div className="text-xs text-muted-foreground">No matching jobs yet. Try adjusting filters.</div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="pt-2">
+                    <h4 className="font-medium mb-2">Your Alerts</h4>
+                    <div className="space-y-2">
+                      {alerts.length === 0 && <div className="text-xs text-muted-foreground">You have no alerts yet.</div>}
+                      {alerts.map(a => (
+                        <div key={a.id} className="flex items-center justify-between rounded-md border p-3">
+                          <div>
+                            <div className="font-medium text-sm">{a.title}</div>
+                            <div className="text-xs text-muted-foreground">{a.location} • {a.types.join(', ')} • {a.frequency} • {a.delivery}</div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button variant="outline" size="sm" onClick={() => { setAlertTitle(a.title); setAlertLocation(a.location); setAlertTypes({ 'Full-time': a.types.includes('Full-time'), 'Part-time': a.types.includes('Part-time'), 'Remote': a.types.includes('Remote') }); setFrequency(a.frequency); setDelivery(a.delivery); setCurrentStep(1); }}>Edit</Button>
+                            <Button variant="destructive" size="sm" onClick={() => deleteAlert(a.id)}>Delete</Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Sticky footer controls */}
+          <SheetFooter className="sticky bottom-0 bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/70 border-t p-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                {currentStep > 1 && (
+                  <Button variant="outline" onClick={() => setCurrentStep((s) => (Math.max(1, (s as number) - 1) as 1|2|3))}>Back</Button>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" onClick={() => { setShowJobAlertPanel(false); }}>Cancel</Button>
+                {currentStep < 3 ? (
+                  <Button className="bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed" disabled={currentStep === 1 ? !isValidStep1 : !isValidStep2} onClick={() => setCurrentStep((s) => (Math.min(3, (s as number) + 1) as 1|2|3))}>Next</Button>
+                ) : (
+                  <Button className="bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed" disabled={!isValidAll} onClick={createAlert}>Create Alert</Button>
+                )}
+              </div>
+            </div>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
