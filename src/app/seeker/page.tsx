@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Navigation } from '@/components/Navigation';
 import { Dashboard } from '@/components/Dashboard';
 import { ProfileEdit } from '@/components/ProfileEdit';
@@ -14,11 +15,32 @@ import { JobRecommendations } from '@/components/JobRecommendations';
 import { JobDetail } from '@/components/JobDetail';
 import RoleGuard from '@/components/RoleGuard';
 import { SeekerApplications } from '@/components/SeekerApplications';
+import { NotificationList } from '@/components/notifications/NotificationList';
+import { SaaSNotificationsPage } from '@/components/notifications/SaaSNotificationsPage';
+import { mockNotifications } from '@/data/mockNotifications';
 
 export default function SeekerPage() {
+  const searchParams = useSearchParams();
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [profileTab, setProfileTab] = useState<'personal' | 'skills' | 'experience' | 'education' | 'resume'>('personal');
   const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null);
+  const [notifications, setNotifications] = useState(mockNotifications);
+  const [selectedNotificationIds, setSelectedNotificationIds] = useState<Set<string>>(new Set());
+  
+  // Handle URL parameters for navigation
+  useEffect(() => {
+    const page = searchParams.get('page');
+    const tab = searchParams.get('tab');
+    
+    if (page) {
+      if (page === 'settings' && tab) {
+        setCurrentPage('settings');
+        // Pass tab to Settings component if needed
+      } else {
+        setCurrentPage(page);
+      }
+    }
+  }, [searchParams]);
 
   const handlePageChange = (page: string) => {
     if (page === 'logout') {
@@ -65,7 +87,13 @@ export default function SeekerPage() {
       case 'recommendations':
         return <JobRecommendations onJobSelect={(jobId) => console.log('Recommended job selected:', jobId)} />;
       case 'job-detail':
-        return <JobDetail onBack={() => setCurrentPage('jobs')} />;
+        return <JobDetail jobId="1" onBack={() => setCurrentPage('jobs')} />;
+      case 'notifications':
+        return (
+          <SaaSNotificationsPage 
+            onNavigateToSettings={() => handlePageChange('settings')}
+          />
+        );
       default:
         return <Dashboard onPageChange={handlePageChange} />;
     }

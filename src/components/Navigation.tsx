@@ -12,6 +12,7 @@ import {
   MessageSquare, 
   BarChart3, 
   Target,
+  Bell,
   LogOut
 } from 'lucide-react';
 import { Button } from './ui/button';
@@ -26,6 +27,7 @@ const menuItems = [
   { id: 'jobs', label: 'Jobs', icon: Briefcase },
   { id: 'saved-jobs', label: 'Saved Jobs', icon: Bookmark },
   { id: 'applications', label: 'Applications', icon: FileText },
+  { id: 'notifications', label: 'Notifications', icon: Bell },
   { id: 'profile', label: 'Profile', icon: User },
   { id: 'settings', label: 'Settings', icon: Settings },
   { id: 'messaging', label: 'Messaging', icon: MessageSquare },

@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { ProfileProgress } from './ProfileProgress';
 import { JobCard, Job } from './JobCard';
+import { NotificationWidget } from './NotificationWidget';
 import { Card, CardHeader, CardTitle, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
@@ -297,6 +298,15 @@ export function Dashboard({ onPageChange }: DashboardProps) {
               transition={{ delay: 0.2 }}
             >
               <ProfileProgress onStepClick={handleProfileStepClick} />
+            </motion.div>
+
+            {/* Notifications Widget */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.25 }}
+            >
+              <NotificationWidget onViewAll={() => onPageChange?.('notifications')} />
             </motion.div>
 
             {/* Saved Jobs Preview */}

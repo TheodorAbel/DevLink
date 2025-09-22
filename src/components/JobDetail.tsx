@@ -22,6 +22,7 @@ import {
   CheckCircle,
   ExternalLink
 } from 'lucide-react';
+import Link from 'next/link';
 import { AnimatedBackground } from './AnimatedBackground';
 import { toast } from 'sonner';
 import { 
@@ -33,6 +34,7 @@ import {
 import { ApplySheet } from './ApplySheet';
 
 interface JobDetailProps {
+  jobId: string;
   onBack: () => void;
   autoOpenApply?: boolean;
 }
@@ -42,6 +44,7 @@ const jobDetail = {
   id: '1',
   title: 'Senior Frontend Developer',
   company: 'TechCorp',
+  companyId: '1',
   location: 'San Francisco, CA',
   salary: '$120,000 - $160,000',
   type: 'Full-time',
@@ -90,10 +93,14 @@ In this role, you'll work closely with our design and product teams to create ex
   }
 };
 
-export function JobDetail({ onBack, autoOpenApply = false }: JobDetailProps) {
+export function JobDetail({ jobId, onBack, autoOpenApply = false }: JobDetailProps) {
   const [isApplied, setIsApplied] = useState(false);
   const [applyOpen, setApplyOpen] = useState(autoOpenApply);
   const [isSaved, setIsSaved] = useState(false);
+  
+  // In a real app, you would fetch job data based on jobId
+  // For now, using mock data
+  const currentJob = jobDetail; // You could have a function to get job by ID
 
   const handleApply = () => {
     // Open the responsive Apply sheet instead of instant-apply
@@ -106,8 +113,8 @@ export function JobDetail({ onBack, autoOpenApply = false }: JobDetailProps) {
   };
 
   const handleShare = (platform?: string) => {
-    const jobUrl = `${window.location.origin}/jobs/${jobDetail.id}`;
-    const shareText = `Check out this ${jobDetail.title} position at ${jobDetail.company}!`;
+    const jobUrl = `${window.location.origin}/jobs/${currentJob.id}`;
+    const shareText = `Check out this ${currentJob.title} position at ${currentJob.company}!`;
     
     if (platform === 'copy') {
       navigator.clipboard.writeText(jobUrl);
@@ -137,7 +144,7 @@ export function JobDetail({ onBack, autoOpenApply = false }: JobDetailProps) {
   };
 
   const copyJobDescription = () => {
-    const fullDescription = `${jobDetail.title} at ${jobDetail.company}\n\n${jobDetail.description}\n\nResponsibilities:\n${jobDetail.responsibilities.map(r => `• ${r}`).join('\n')}\n\nRequirements:\n${jobDetail.requirements.map(r => `• ${r}`).join('\n')}`;
+    const fullDescription = `${currentJob.title} at ${currentJob.company}\n\n${currentJob.description}\n\nResponsibilities:\n${currentJob.responsibilities.map(r => `• ${r}`).join('\n')}\n\nRequirements:\n${currentJob.requirements.map(r => `• ${r}`).join('\n')}`;
     navigator.clipboard.writeText(fullDescription);
     toast.success('Job description copied to clipboard!');
   };
@@ -181,26 +188,26 @@ export function JobDetail({ onBack, autoOpenApply = false }: JobDetailProps) {
                   
                   <div className="flex-1">
                     <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-2">
-                      {jobDetail.title}
+                      {currentJob.title}
                     </h1>
-                    <p className="text-lg text-blue-600 font-medium mb-4">{jobDetail.company}</p>
+                    <p className="text-lg text-blue-600 font-medium mb-4">{currentJob.company}</p>
                     
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <MapPin className="h-4 w-4" />
-                        {jobDetail.location}
+                        {currentJob.location}
                       </div>
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <DollarSign className="h-4 w-4" />
-                        {jobDetail.salary}
+                        {currentJob.salary}
                       </div>
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <Clock className="h-4 w-4" />
-                        {jobDetail.type}
+                        {currentJob.type}
                       </div>
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <Users className="h-4 w-4" />
-                        {jobDetail.applicants} applicants
+                        {currentJob.applicants} applicants
                       </div>
                     </div>
                   </div>
@@ -236,8 +243,8 @@ export function JobDetail({ onBack, autoOpenApply = false }: JobDetailProps) {
         <ApplySheet
           open={applyOpen}
           onOpenChange={(o) => setApplyOpen(o)}
-          jobTitle={jobDetail.title}
-          company={jobDetail.company}
+          jobTitle={currentJob.title}
+          company={currentJob.company}
           profileResumeName={'Sarah_Johnson_Resume.pdf'}
           screeningQuestions={[
             { id: 'q1', text: 'How many years of React experience do you have?', type: 'short-answer', required: true },
@@ -259,10 +266,10 @@ export function JobDetail({ onBack, autoOpenApply = false }: JobDetailProps) {
       {/* Job Meta Info */}
       <div className="flex flex-wrap gap-4 mt-6 pt-4 border-t border-gray-200">
         <div className="text-sm text-muted-foreground">
-          Posted {jobDetail.postedDate}
+          Posted {currentJob.postedDate}
         </div>
         <div className="text-sm text-muted-foreground">
-          Application deadline: {jobDetail.applicationDeadline}
+          Application deadline: {currentJob.applicationDeadline}
         </div>
         <Button
           variant="ghost"
@@ -288,7 +295,7 @@ export function JobDetail({ onBack, autoOpenApply = false }: JobDetailProps) {
                 <CardTitle>About the Role</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <p className="text-muted-foreground leading-relaxed">{jobDetail.description}</p>
+                <p className="text-muted-foreground leading-relaxed">{currentJob.description}</p>
               </CardContent>
             </Card>
           </motion.div>
@@ -305,7 +312,7 @@ export function JobDetail({ onBack, autoOpenApply = false }: JobDetailProps) {
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2">
-                  {jobDetail.responsibilities.map((responsibility, index) => (
+                  {currentJob.responsibilities.map((responsibility, index) => (
                     <motion.li
                       key={index}
                       initial={{ opacity: 0, x: -10 }}
@@ -334,7 +341,7 @@ export function JobDetail({ onBack, autoOpenApply = false }: JobDetailProps) {
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2">
-                  {jobDetail.requirements.map((requirement, index) => (
+                  {currentJob.requirements.map((requirement, index) => (
                     <motion.li
                       key={index}
                       initial={{ opacity: 0, x: -10 }}
@@ -363,7 +370,7 @@ export function JobDetail({ onBack, autoOpenApply = false }: JobDetailProps) {
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-2">
-                  {jobDetail.skills.map((skill, index) => (
+                  {currentJob.skills.map((skill, index) => (
                     <motion.div
                       key={skill}
                       initial={{ opacity: 0, scale: 0.8 }}
@@ -395,28 +402,43 @@ export function JobDetail({ onBack, autoOpenApply = false }: JobDetailProps) {
             <Card className="relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-br from-gray-50/50 to-blue-50/30" />
               <CardHeader className="relative">
-                <CardTitle>About {jobDetail.companyInfo.name}</CardTitle>
+                <CardTitle>About {currentJob.companyInfo.name}</CardTitle>
               </CardHeader>
               <CardContent className="relative space-y-4">
-                <p className="text-sm text-muted-foreground">{jobDetail.companyInfo.description}</p>
+                <h1 className="text-3xl font-bold tracking-tight">{currentJob.title}</h1>
+                <div className="flex items-center space-x-2">
+                  <div className="group relative">
+                    <Link 
+                      href={`/company/${currentJob.companyId || '1'}`}
+                      className="text-muted-foreground hover:text-blue-600 hover:underline flex items-center"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {currentJob.company}
+                      <ExternalLink className="ml-1 h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </Link>
+                  </div>
+                  <span className="text-muted-foreground">•</span>
+                  <span className="text-muted-foreground">{currentJob.location}</span>
+                </div>
+                <p className="text-sm text-muted-foreground">{currentJob.companyInfo.description}</p>
                 
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Company size:</span>
-                    <span>{jobDetail.companyInfo.size}</span>
+                    <span>{currentJob.companyInfo.size}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Industry:</span>
-                    <span>{jobDetail.companyInfo.industry}</span>
+                    <span>{currentJob.companyInfo.industry}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Founded:</span>
-                    <span>{jobDetail.companyInfo.founded}</span>
+                    <span>{currentJob.companyInfo.founded}</span>
                   </div>
                 </div>
                 
                 <Button variant="outline" className="w-full" asChild>
-                  <a href={jobDetail.companyInfo.website} target="_blank" rel="noopener noreferrer">
+                  <a href={currentJob.companyInfo.website} target="_blank" rel="noopener noreferrer">
                     Visit Company Website
                     <ExternalLink className="h-4 w-4 ml-2" />
                   </a>
@@ -438,7 +460,7 @@ export function JobDetail({ onBack, autoOpenApply = false }: JobDetailProps) {
               </CardHeader>
               <CardContent className="relative">
                 <ul className="space-y-2">
-                  {jobDetail.benefits.map((benefit, index) => (
+                  {currentJob.benefits.map((benefit, index) => (
                     <motion.li
                       key={index}
                       initial={{ opacity: 0, x: -10 }}

@@ -17,7 +17,9 @@ import {
   Eye,
   ChevronDown,
   Grid,
-  List
+  List,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { AnimatedBackground } from './AnimatedBackground';
 import { 
@@ -39,7 +41,7 @@ import {
 import { Slider } from './ui/slider';
 import { toast } from 'sonner';
 
-// Mock data
+// Mock data - expanded for pagination testing
 const mockJobs: Job[] = [
   {
     id: '1',
@@ -107,6 +109,73 @@ const mockJobs: Job[] = [
     postedDate: '1 week ago',
     description: 'Manage cloud infrastructure and CI/CD pipelines. Help scale our platform to support millions of users.',
     skills: ['AWS', 'Docker', 'Kubernetes', 'Terraform']
+  },
+  {
+    id: '7',
+    title: 'Backend Developer',
+    company: 'ServerTech',
+    location: 'Chicago, IL',
+    salary: '$105K - $135K',
+    type: 'Full-time',
+    postedDate: '4 days ago',
+    description: 'Build scalable backend services and APIs. Work with microservices architecture and cloud technologies.',
+    skills: ['Node.js', 'Python', 'MongoDB', 'Redis']
+  },
+  {
+    id: '8',
+    title: 'Mobile Developer',
+    company: 'AppWorks',
+    location: 'Los Angeles, CA',
+    salary: '$95K - $125K',
+    type: 'Full-time',
+    postedDate: '6 days ago',
+    description: 'Develop native mobile applications for iOS and Android platforms using React Native.',
+    skills: ['React Native', 'iOS', 'Android', 'JavaScript']
+  },
+  {
+    id: '9',
+    title: 'QA Engineer',
+    company: 'TestPro',
+    location: 'Boston, MA',
+    salary: '$75K - $95K',
+    type: 'Full-time',
+    postedDate: '1 week ago',
+    description: 'Ensure software quality through comprehensive testing strategies and automation.',
+    skills: ['Selenium', 'Jest', 'Cypress', 'API Testing']
+  },
+  {
+    id: '10',
+    title: 'Security Engineer',
+    company: 'SecureNet',
+    location: 'Washington, DC',
+    salary: '$125K - $155K',
+    type: 'Full-time',
+    postedDate: '2 weeks ago',
+    description: 'Implement security measures and conduct vulnerability assessments for enterprise applications.',
+    skills: ['Cybersecurity', 'Penetration Testing', 'SIEM', 'Compliance']
+  },
+  {
+    id: '11',
+    title: 'AI/ML Engineer',
+    company: 'AITech',
+    location: 'Palo Alto, CA',
+    salary: '$140K - $180K',
+    type: 'Full-time',
+    postedDate: '3 days ago',
+    description: 'Develop machine learning models and AI solutions for cutting-edge applications.',
+    skills: ['Python', 'TensorFlow', 'PyTorch', 'Deep Learning'],
+    featured: true
+  },
+  {
+    id: '12',
+    title: 'Cloud Architect',
+    company: 'CloudSys',
+    location: 'Remote',
+    salary: '$150K - $190K',
+    type: 'Full-time',
+    postedDate: '5 days ago',
+    description: 'Design and implement cloud infrastructure solutions for enterprise clients.',
+    skills: ['AWS', 'Azure', 'GCP', 'Terraform']
   }
 ];
 
@@ -124,6 +193,13 @@ export function JobList({ onJobSelect }: JobListProps) {
   const [salaryRange, setSalaryRange] = useState([0, 200000]);
   const [showFilters, setShowFilters] = useState(false);
   const [showNotificationPrompt, setShowNotificationPrompt] = useState(true);
+  
+  // Saved jobs state
+  const [savedJobs, setSavedJobs] = useState<Set<string>>(new Set());
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const jobsPerPage = 6;
   
   // New state for job detail view
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
@@ -192,6 +268,44 @@ export function JobList({ onJobSelect }: JobListProps) {
 
   const deleteAlert = (id: string) => setAlerts(prev => prev.filter(a => a.id !== id));
 
+  // Handle save job
+  const handleSaveJob = (jobId: string) => {
+    setSavedJobs(prev => {
+      const newSavedJobs = new Set(prev);
+      if (newSavedJobs.has(jobId)) {
+        newSavedJobs.delete(jobId);
+        toast.success('Job removed from saved jobs');
+      } else {
+        newSavedJobs.add(jobId);
+        toast.success('Job saved successfully!');
+      }
+      return newSavedJobs;
+    });
+  };
+
+  // Handle share job
+  const handleShareJob = (jobId: string) => {
+    const job = mockJobs.find(j => j.id === jobId);
+    if (job) {
+      const shareUrl = `${window.location.origin}/jobs/${jobId}/share`;
+      if (navigator.share) {
+        navigator.share({
+          title: `${job.title} at ${job.company}`,
+          text: `Check out this job opportunity: ${job.title} at ${job.company}`,
+          url: shareUrl,
+        }).catch(() => {
+          // Fallback to clipboard
+          navigator.clipboard.writeText(shareUrl);
+          toast.success('Job link copied to clipboard!');
+        });
+      } else {
+        // Fallback to clipboard
+        navigator.clipboard.writeText(shareUrl);
+        toast.success('Job link copied to clipboard!');
+      }
+    }
+  };
+
   const filteredJobs = mockJobs.filter(job => {
     const matchesSearch = job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          job.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -217,6 +331,24 @@ export function JobList({ onJobSelect }: JobListProps) {
         return 0;
     }
   });
+
+  // Pagination logic
+  const totalPages = Math.ceil(sortedJobs.length / jobsPerPage);
+  const startIndex = (currentPage - 1) * jobsPerPage;
+  const endIndex = startIndex + jobsPerPage;
+  const currentJobs = sortedJobs.slice(startIndex, endIndex);
+
+  const handlePreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
 
   // Handle job card click to show detail view
   const handleJobView = (jobId: string) => {
@@ -265,7 +397,7 @@ export function JobList({ onJobSelect }: JobListProps) {
             Discover Your Dream Job
           </h1>
           <p className="text-muted-foreground mt-2">
-            {filteredJobs.length} opportunities waiting for you
+            {filteredJobs.length} opportunities waiting for you • Page {currentPage} of {totalPages}
           </p>
         </motion.div>
 
@@ -437,7 +569,7 @@ export function JobList({ onJobSelect }: JobListProps) {
                   : 'grid-cols-1'
               }`}
             >
-              {sortedJobs.map((job, index) => (
+              {currentJobs.map((job, index) => (
                 <motion.div
                   key={job.id}
                   initial={{ opacity: 0, y: 20 }}
@@ -448,28 +580,60 @@ export function JobList({ onJobSelect }: JobListProps) {
                     job={job}
                     variant={viewMode === 'list' ? 'compact' : 'default'}
                     onApply={(jobId) => handleJobApply(jobId)}
-                    onSave={(jobId) => console.log('Save', jobId)}
+                    onSave={handleSaveJob}
+                    onShare={handleShareJob}
                     onView={(jobId) => handleJobView(jobId)}
+                    isSaved={savedJobs.has(job.id)}
                   />
                 </motion.div>
               ))}
             </motion.div>
 
             {/* Pagination */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.5 }}
-              className="mt-8 flex justify-center"
-            >
-              <div className="flex gap-2">
-                <Button variant="outline" disabled>Previous</Button>
-                <Button variant="default">1</Button>
-                <Button variant="outline">2</Button>
-                <Button variant="outline">3</Button>
-                <Button variant="outline">Next</Button>
-              </div>
-            </motion.div>
+            {totalPages > 1 && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.5 }}
+                className="mt-8 flex justify-center"
+              >
+                <div className="flex items-center gap-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={handlePreviousPage}
+                    disabled={currentPage === 1}
+                    className="flex items-center gap-2"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Previous
+                  </Button>
+                  
+                  {/* Page numbers */}
+                  <div className="flex gap-1">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                      <Button
+                        key={page}
+                        variant={currentPage === page ? 'default' : 'outline'}
+                        onClick={() => setCurrentPage(page)}
+                        className="w-10 h-10"
+                      >
+                        {page}
+                      </Button>
+                    ))}
+                  </div>
+                  
+                  <Button 
+                    variant="outline" 
+                    onClick={handleNextPage}
+                    disabled={currentPage === totalPages}
+                    className="flex items-center gap-2"
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </motion.div>
+            )}
           </div>
 
           {/* Sidebar */}

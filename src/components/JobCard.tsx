@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import Link from 'next/link';
 import { Card, CardHeader, CardTitle, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -11,13 +12,15 @@ import {
   Share2, 
   Eye,
   Building2,
-  Calendar
+  Calendar,
+  ExternalLink
 } from 'lucide-react';
 
 export interface Job {
   id: string;
   title: string;
   company: string;
+  companyId?: string; // Added companyId to link to company profile
   location: string;
   salary: string;
   type: string;
@@ -33,7 +36,9 @@ interface JobCardProps {
   variant?: 'default' | 'compact' | 'detailed';
   onApply?: (jobId: string) => void;
   onSave?: (jobId: string) => void;
+  onShare?: (jobId: string) => void;
   onView?: (jobId: string) => void;
+  isSaved?: boolean;
   className?: string;
 }
 
@@ -42,7 +47,9 @@ export function JobCard({
   variant = 'default', 
   onApply, 
   onSave, 
+  onShare,
   onView,
+  isSaved = false,
   className = ''
 }: JobCardProps) {
   const handleCardClick = () => {
@@ -74,17 +81,19 @@ export function JobCard({
                 <h4 className="font-medium line-clamp-1">{job.title}</h4>
                 <p className="text-sm text-muted-foreground">{job.company}</p>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="opacity-0 group-hover:opacity-100 transition-opacity"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onSave?.(job.id);
-                }}
-              >
-                <Bookmark className="h-4 w-4" />
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSave?.(job.id);
+                  }}
+                >
+                  <Bookmark className={`h-4 w-4 ${isSaved ? 'fill-red-500 text-red-500' : ''}`} />
+                </Button>
+              </div>
             </div>
             
             <div className="flex items-center gap-4 text-xs text-muted-foreground mb-2">
@@ -153,7 +162,19 @@ export function JobCard({
                 <CardTitle className="line-clamp-1 group-hover:text-blue-600 transition-colors">
                   {job.title}
                 </CardTitle>
-                <p className="text-muted-foreground mt-1">{job.company}</p>
+                <div className="flex items-center space-x-2 group">
+                  <Building2 className="h-4 w-4 text-gray-500 flex-shrink-0" />
+                  <div className="relative" onClick={(e) => e.stopPropagation()}>
+                    <Link 
+                      href={`/company/${job.companyId || '1'}`} 
+                      className="text-sm text-gray-600 hover:text-blue-600 hover:underline flex items-center"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {job.company}
+                      <ExternalLink className="ml-1 h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                    </Link>
+                  </div>
+                </div>
                 
                 <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
                   <div className="flex items-center gap-1">
@@ -182,14 +203,14 @@ export function JobCard({
                 }}
                 className="hover:bg-white/80"
               >
-                <Bookmark className="h-4 w-4" />
+                <Bookmark className={`h-4 w-4 ${isSaved ? 'fill-red-500 text-red-500' : ''}`} />
               </Button>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={(e) => {
                   e.stopPropagation();
-                  // Handle share
+                  onShare?.(job.id);
                 }}
                 className="hover:bg-white/80"
               >

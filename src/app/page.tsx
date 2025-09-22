@@ -25,9 +25,24 @@ export default function TestPage() {
   }, [])
 
   return (
-    <div>
-      <h1>Supabase Test</h1>
-      <pre>{JSON.stringify(data, null, 2)}</pre>
+    <div className="p-8">
+      <h1 className="text-2xl font-bold mb-4">Job Marketplace Dashboard</h1>
+      
+      {/* Quick Navigation */}
+      <div className="mb-8 p-4 bg-gray-50 rounded-lg">
+        <h2 className="text-lg font-semibold mb-3">Quick Access</h2>
+        <div className="flex gap-4">
+          <a href="/notifications" className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+            🔔 Notifications Dashboard
+          </a>
+          <a href="/saved-jobs" className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors">
+            📋 Saved Jobs
+          </a>
+        </div>
+      </div>
+      
+      <h3 className="text-lg font-semibold mb-2">Supabase Test Data</h3>
+      <pre className="bg-gray-100 p-4 rounded-lg overflow-auto">{JSON.stringify(data, null, 2)}</pre>
     </div>
   )
 }
