@@ -17,7 +17,8 @@ import {
   Info,
   Clock,
   Check,
-  CheckCheck
+  CheckCheck,
+  MessageSquare
 } from "lucide-react";
 import {
   DropdownMenu,

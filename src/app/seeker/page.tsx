@@ -15,7 +15,6 @@ import { JobRecommendations } from '@/components/JobRecommendations';
 import { JobDetail } from '@/components/JobDetail';
 import RoleGuard from '@/components/RoleGuard';
 import { SeekerApplications } from '@/components/SeekerApplications';
-import { NotificationList } from '@/components/notifications/NotificationList';
 import { SaaSNotificationsPage } from '@/components/notifications/SaaSNotificationsPage';
 import { mockNotifications } from '@/data/mockNotifications';
 
@@ -24,8 +23,7 @@ export default function SeekerPage() {
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [profileTab, setProfileTab] = useState<'personal' | 'skills' | 'experience' | 'education' | 'resume'>('personal');
   const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null);
-  const [notifications, setNotifications] = useState(mockNotifications);
-  const [selectedNotificationIds, setSelectedNotificationIds] = useState<Set<string>>(new Set());
+  // Notifications state managed inside notifications pages/components
   
   // Handle URL parameters for navigation
   useEffect(() => {
@@ -87,7 +85,7 @@ export default function SeekerPage() {
       case 'recommendations':
         return <JobRecommendations onJobSelect={(jobId) => console.log('Recommended job selected:', jobId)} />;
       case 'job-detail':
-        return <JobDetail jobId="1" onBack={() => setCurrentPage('jobs')} />;
+        return <JobDetail onBack={() => setCurrentPage('jobs')} />;
       case 'notifications':
         return (
           <SaaSNotificationsPage 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Card, CardHeader, CardTitle, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -22,10 +22,9 @@ import {
   Play,
   TrendingUp,
   Target,
-  Building2,
   AlertCircle,
   CheckCircle,
-  X
+  BarChart3
 } from 'lucide-react';
 import { 
   Select,
@@ -356,7 +355,7 @@ export function JobAlerts({ currentSearch, currentLocation }: JobAlertsProps) {
               {/* Frequency */}
               <div className="space-y-2">
                 <Label>Notification Frequency</Label>
-                <Select value={formData.frequency} onValueChange={(value) => setFormData({...formData, frequency: value as any})}>
+                <Select value={formData.frequency} onValueChange={(value: 'instant' | 'daily' | 'weekly') => setFormData({...formData, frequency: value})}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -424,7 +423,7 @@ export function JobAlerts({ currentSearch, currentLocation }: JobAlertsProps) {
                 <div>
                   <h3 className="font-medium">Create alert from current search</h3>
                   <p className="text-sm text-muted-foreground">
-                    Get notified about new "{currentSearch}" jobs in "{currentLocation}"
+                    Get notified about new &quot;{currentSearch}&quot; jobs in &quot;{currentLocation}&quot;
                   </p>
                 </div>
               </div>

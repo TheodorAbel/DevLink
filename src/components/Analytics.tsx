@@ -6,7 +6,6 @@ import { Badge } from './ui/badge';
 import { 
   BarChart3,
   TrendingUp,
-  TrendingDown,
   Eye,
   FileText,
   Target,
@@ -19,10 +18,9 @@ import {
   Lightbulb,
   Download
 } from 'lucide-react';
+
 import { AnimatedBackground } from './AnimatedBackground';
 import { 
-  LineChart,
-  Line,
   BarChart,
   Bar,
   XAxis,
@@ -36,6 +34,7 @@ import {
   Area,
   AreaChart
 } from 'recharts';
+
 import { 
   Select,
   SelectContent,
@@ -125,7 +124,7 @@ const careerRecommendations = [
   }
 ];
 
-export function Analytics({ onBack }: AnalyticsProps) {
+export function Analytics({ onBack: _onBack }: AnalyticsProps) {
   const [timeRange, setTimeRange] = useState('6months');
 
   const getPriorityColor = (priority: string) => {

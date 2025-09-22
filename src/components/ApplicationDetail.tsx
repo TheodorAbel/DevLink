@@ -20,7 +20,6 @@ import {
   CalendarPlus
 } from 'lucide-react';
 import { AnimatedBackground } from './AnimatedBackground';
-import { Separator } from './ui/separator';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { toast } from 'sonner';
 
@@ -148,7 +147,7 @@ export function ApplicationDetail({ onBack, showMessages = false }: ApplicationD
   };
 
   const handleAddToCalendar = () => {
-    const { date, time, duration, type } = applicationData.interviewDetails;
+    const { date, time, type } = applicationData.interviewDetails;
     const startDate = new Date(`${date} ${time}`);
     const endDate = new Date(startDate.getTime() + 60 * 60 * 1000); // Add 1 hour
     

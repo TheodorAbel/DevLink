@@ -13,10 +13,9 @@ import {
   CheckCircle, 
   Clock, 
   X,
-  ChevronLeft,
-  ChevronRight,
   ArrowRight
 } from 'lucide-react';
+
 import { AnimatedBackground } from './AnimatedBackground';
 
 // Mock data
@@ -155,7 +154,7 @@ export function Dashboard({ onPageChange }: DashboardProps) {
             Welcome back, Sarah! 👋
           </h1>
           <p className="text-muted-foreground mt-2">
-            Here's what's happening with your job search today
+            Here&apos;s what&apos;s happening with your job search today
           </p>
         </motion.div>
 
