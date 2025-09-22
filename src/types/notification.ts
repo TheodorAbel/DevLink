@@ -24,7 +24,7 @@ export interface Notification {
   updatedAt: Date;
   userId: string;
   organizationId?: string; // Multi-tenant support
-  metadata?: Record<string, any>; // Extensible data
+  metadata?: Record<string, unknown>; // Extensible data
   actionUrl?: string; // Deep linking
   groupId?: string; // For notification grouping
   expiresAt?: Date; // Auto-cleanup
@@ -109,5 +109,5 @@ export interface NotificationEngagement {
   userId: string;
   action: 'viewed' | 'clicked' | 'dismissed' | 'archived';
   timestamp: Date;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }

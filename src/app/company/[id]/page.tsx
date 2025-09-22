@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
@@ -22,9 +22,9 @@ const mockCompanyData = {
   about: 'TechCorp is a leading technology company specializing in innovative software solutions. We build cutting-edge applications that help businesses transform their digital presence and streamline operations.',
   culture: 'At TechCorp, we believe in fostering a culture of innovation, collaboration, and continuous learning. Our team is passionate about creating meaningful impact through technology.',
   media: [
-    { id: '1', type: 'image', url: '/office1.jpg', title: 'Modern Office Space' },
-    { id: '2', type: 'image', url: '/team1.jpg', title: 'Team Building Event' },
-    { id: '3', type: 'video', url: '/company-video.mp4', title: 'Our Culture' },
+    { id: '1', type: 'image' as const, url: '/office1.jpg', title: 'Modern Office Space' },
+    { id: '2', type: 'image' as const, url: '/team1.jpg', title: 'Team Building Event' },
+    { id: '3', type: 'video' as const, url: '/company-video.mp4', title: 'Our Culture' },
   ],
   leadership: [
     { id: '1', name: 'John Doe', role: 'CEO & Co-founder', avatar: '/avatar1.jpg' },
@@ -54,7 +54,7 @@ const mockCompanyData = {
 
 export default function CompanyProfilePage() {
   const params = useParams();
-  const [company, setCompany] = useState(mockCompanyData);
+  const [company] = useState(mockCompanyData);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {

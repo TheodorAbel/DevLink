@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
+
 import { motion } from 'framer-motion';
 import { Card, CardHeader, CardTitle, CardContent } from './ui/card';
 import { Button } from './ui/button';
@@ -9,32 +10,20 @@ import {
   ArrowLeft,
   MapPin, 
   DollarSign, 
-  Calendar,
   Clock,
   Users,
   Building2,
-  Bookmark,
-  Share2,
-  Flag,
-  Copy,
-  Mail,
-  MessageCircle,
   CheckCircle,
   ExternalLink
 } from 'lucide-react';
+
 import Link from 'next/link';
 import { AnimatedBackground } from './AnimatedBackground';
 import { toast } from 'sonner';
-import { 
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from './ui/dropdown-menu';
+
 import { ApplySheet } from './ApplySheet';
 
 interface JobDetailProps {
-  jobId: string;
   onBack: () => void;
   autoOpenApply?: boolean;
 }
@@ -93,10 +82,9 @@ In this role, you'll work closely with our design and product teams to create ex
   }
 };
 
-export function JobDetail({ jobId, onBack, autoOpenApply = false }: JobDetailProps) {
-  const [isApplied, setIsApplied] = useState(false);
+export function JobDetail({ onBack, autoOpenApply = false }: JobDetailProps) {
+  const [isApplied] = useState(false);
   const [applyOpen, setApplyOpen] = useState(autoOpenApply);
-  const [isSaved, setIsSaved] = useState(false);
   
   // In a real app, you would fetch job data based on jobId
   // For now, using mock data
@@ -107,41 +95,7 @@ export function JobDetail({ jobId, onBack, autoOpenApply = false }: JobDetailPro
     setApplyOpen(true);
   };
 
-  const handleSave = () => {
-    setIsSaved(!isSaved);
-    toast.success(isSaved ? 'Job removed from saved' : 'Job saved successfully!');
-  };
-
-  const handleShare = (platform?: string) => {
-    const jobUrl = `${window.location.origin}/jobs/${currentJob.id}`;
-    const shareText = `Check out this ${currentJob.title} position at ${currentJob.company}!`;
-    
-    if (platform === 'copy') {
-      navigator.clipboard.writeText(jobUrl);
-      toast.success('Job URL copied to clipboard!');
-    } else if (platform === 'email') {
-      window.open(`mailto:?subject=${encodeURIComponent(shareText)}&body=${encodeURIComponent(`${shareText}\n\n${jobUrl}`)}`);
-    } else if (platform === 'linkedin') {
-      window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(jobUrl)}`);
-    } else if (platform === 'whatsapp') {
-      window.open(`https://wa.me/?text=${encodeURIComponent(`${shareText}\n${jobUrl}`)}`);
-    } else {
-      // Generic share
-      if (navigator.share) {
-        navigator.share({
-          title: shareText,
-          url: jobUrl
-        });
-      } else {
-        navigator.clipboard.writeText(jobUrl);
-        toast.success('Job URL copied to clipboard!');
-      }
-    }
-  };
-
-  const handleReport = () => {
-    toast.success('Job reported. Thank you for helping us maintain quality listings.');
-  };
+  // Removed unused save/share/report handlers to satisfy ESLint
 
   const copyJobDescription = () => {
     const fullDescription = `${currentJob.title} at ${currentJob.company}\n\n${currentJob.description}\n\nResponsibilities:\n${currentJob.responsibilities.map(r => `• ${r}`).join('\n')}\n\nRequirements:\n${currentJob.requirements.map(r => `• ${r}`).join('\n')}`;
@@ -488,7 +442,7 @@ export function JobDetail({ jobId, onBack, autoOpenApply = false }: JobDetailPro
               <CardContent className="p-6 relative text-center">
                 <h3 className="font-semibold mb-2">Ready to Apply?</h3>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Don't miss out on this opportunity. Apply now and take the next step in your career.
+                  Don&apos;t miss out on this opportunity. Apply now and take the next step in your career.
                 </p>
                 <Button
                   onClick={handleApply}

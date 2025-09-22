@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import * as React from 'react'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
@@ -15,7 +16,7 @@ import { RadioGroup, RadioGroupItem } from './ui/radio-group'
 import { Label } from './ui/label'
 import { Separator } from './ui/separator'
 import { toast } from 'sonner'
-import { FileText, CheckCircle2 } from 'lucide-react'
+import { CheckCircle2 } from 'lucide-react'
 
 // Question types mirror employer PostJobForm
 export type ScreeningType = 'yes-no' | 'multiple-choice' | 'checkbox' | 'short-answer'
@@ -36,7 +37,7 @@ const schema = z.object({
   resumeFile: z.any().optional(),
   coverLetter: z.string().min(20, 'Cover letter is too short'),
   // Screening answers captured in a generic way (UI only)
-  screening: z.record(z.any()).optional(),
+  screening: z.record(z.string(), z.any()).optional(),
 })
 
 export type ApplySheetProps = {
@@ -73,7 +74,7 @@ export function ApplySheet({ open, onOpenChange, jobTitle, company, profileResum
     }
   }, [open])
 
-  const onSubmit = handleSubmit(async (values) => {
+  const onSubmit = handleSubmit(async () => {
     setSubmitting(true)
     await new Promise((r) => setTimeout(r, 900))
     setSubmitting(false)

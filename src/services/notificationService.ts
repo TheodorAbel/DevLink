@@ -1,7 +1,6 @@
 // SaaS-grade notification service with real-time integration hooks
 
 import { 
-  Notification, 
   NotificationResponse, 
   NotificationActionResponse, 
   NotificationPreferences,
@@ -13,9 +12,11 @@ import {
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3001';
 
+type EventCallback = (data: unknown) => void;
+
 class NotificationService {
   private wsConnection: WebSocket | null = null;
-  private eventListeners: Map<string, Function[]> = new Map();
+  private eventListeners: Map<string, EventCallback[]> = new Map();
   
   // Core CRUD Operations
   async fetchNotifications(
@@ -183,14 +184,14 @@ class NotificationService {
   }
   
   // Event Management
-  on(event: string, callback: Function): void {
+  on(event: string, callback: EventCallback): void {
     if (!this.eventListeners.has(event)) {
       this.eventListeners.set(event, []);
     }
     this.eventListeners.get(event)!.push(callback);
   }
   
-  off(event: string, callback: Function): void {
+  off(event: string, callback: EventCallback): void {
     const listeners = this.eventListeners.get(event);
     if (listeners) {
       const index = listeners.indexOf(callback);
@@ -198,7 +199,7 @@ class NotificationService {
     }
   }
   
-  private emit(event: string, data: any): void {
+  private emit(event: string, data: unknown): void {
     const listeners = this.eventListeners.get(event);
     if (listeners) {
       listeners.forEach(callback => callback(data));
@@ -206,7 +207,7 @@ class NotificationService {
   }
   
   // Analytics Integration
-  async trackEngagement(notificationId: string, action: string, metadata?: any): Promise<void> {
+  async trackEngagement(notificationId: string, action: string, metadata?: unknown): Promise<void> {
     try {
       await fetch(`${API_BASE_URL}/notifications/analytics`, {
         method: 'POST',
@@ -234,7 +235,7 @@ class NotificationService {
   }
   
   // Firebase Integration Hook (alternative to WebSocket)
-  initializeFirebase(config: any): void {
+  initializeFirebase(config: unknown): void {
     // TODO: Firebase initialization
     // import { initializeApp } from 'firebase/app';
     // import { getMessaging, onMessage } from 'firebase/messaging';
