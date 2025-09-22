@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { Card, CardContent } from "./ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -10,7 +10,6 @@ import {
   Search, 
   Grid, 
   List, 
-  Filter,
   Eye,
   MessageSquare,
   Calendar,
@@ -52,7 +51,7 @@ const statusConfig = {
 };
 
 export function ApplicationsList({ 
-  jobId, 
+  jobId: _jobId, 
   jobTitle, 
   applications, 
   onViewApplication, 

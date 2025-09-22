@@ -9,13 +9,10 @@ import { Badge } from './ui/badge';
 import { 
   Search, 
   MapPin, 
-  DollarSign, 
-  Calendar,
-  Filter,
+  DollarSign,
   SlidersHorizontal,
   Bell,
   Eye,
-  ChevronDown,
   Grid,
   List,
   ChevronLeft,
@@ -185,14 +182,14 @@ interface JobListProps {
   onJobSelect: (jobId: string) => void;
 }
 
-export function JobList({ onJobSelect }: JobListProps) {
+export function JobList({ onJobSelect: _onJobSelect }: JobListProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [sortBy, setSortBy] = useState('newest');
   const [jobType, setJobType] = useState('all');
   const [salaryRange, setSalaryRange] = useState([0, 200000]);
-  const [showFilters, setShowFilters] = useState(false);
   const [showNotificationPrompt, setShowNotificationPrompt] = useState(true);
+  void _onJobSelect;
   
   // Saved jobs state
   const [savedJobs, setSavedJobs] = useState<Set<string>>(new Set());
@@ -375,7 +372,6 @@ export function JobList({ onJobSelect }: JobListProps) {
   if (showJobDetail) {
     return (
       <JobDetail
-        jobId={selectedJobId!}
         onBack={handleBackToJobs}
         autoOpenApply={autoOpenApply}
       />
@@ -793,9 +789,9 @@ export function JobList({ onJobSelect }: JobListProps) {
                   <div>
                     <label className="text-sm font-medium mb-2 block">Notification Frequency</label>
                     <div className="grid grid-cols-3 gap-2 pt-1">
-                      {(['Daily','Weekly','Instant'] as const).map(f => (
+                      {(['Daily','Weekly','Instant'] as const).map((f: 'Daily'|'Weekly'|'Instant') => (
                         <label key={f} className="flex items-center gap-2 rounded-md border p-2 text-sm cursor-pointer">
-                          <input type="radio" name="frequency" value={f} checked={frequency === f} onChange={(e) => setFrequency(e.target.value as any)} />
+                          <input type="radio" name="frequency" value={f} checked={frequency === f} onChange={(e) => setFrequency(e.target.value as 'Daily'|'Weekly'|'Instant')} />
                           <span>{f}</span>
                         </label>
                       ))}
@@ -807,9 +803,9 @@ export function JobList({ onJobSelect }: JobListProps) {
                   <div>
                     <label className="text-sm font-medium mb-2 block">Delivery Method</label>
                     <div className="grid grid-cols-3 gap-2 pt-1">
-                      {(['Email','SMS','Push'] as const).map(d => (
+                      {(['Email','SMS','Push'] as const).map((d: 'Email'|'SMS'|'Push') => (
                         <label key={d} className="flex items-center gap-2 rounded-md border p-2 text-sm cursor-pointer">
-                          <input type="radio" name="delivery" value={d} checked={delivery === d} onChange={(e) => setDelivery(e.target.value as any)} />
+                          <input type="radio" name="delivery" value={d} checked={delivery === d} onChange={(e) => setDelivery(e.target.value as 'Email'|'SMS'|'Push')} />
                           <span>{d}</span>
                         </label>
                       ))}

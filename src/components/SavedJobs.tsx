@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { JobDetail } from './JobDetail';
-import { Card, CardHeader, CardTitle, CardContent } from './ui/card';
+import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { 
@@ -12,7 +12,6 @@ import {
   Clock,
   Trash2,
   Eye,
-  Filter,
   Grid,
   List,
   Search,
@@ -352,7 +351,7 @@ export function SavedJobs({ onJobSelect }: SavedJobsProps) {
   };
 
   if (showJobDetail) {
-    return <JobDetail onBack={handleBackToSavedJobs} autoOpenApply={autoOpenApply} jobId={selectedJobDetail} />;
+    return <JobDetail onBack={handleBackToSavedJobs} autoOpenApply={autoOpenApply} />;
   }
 
   return (
@@ -461,7 +460,7 @@ export function SavedJobs({ onJobSelect }: SavedJobsProps) {
               <BookmarkMinus className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="font-semibold mb-2">No Saved Jobs</h3>
               <p className="text-sm text-muted-foreground">
-                Start exploring jobs and save the ones you're interested in.
+                Start exploring jobs and save the ones you&apos;re interested in.
               </p>
             </Card>
           </motion.div>
@@ -530,7 +529,7 @@ export function SavedJobs({ onJobSelect }: SavedJobsProps) {
                   <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                   <h3 className="font-semibold mb-2">No Results Found</h3>
                   <p className="text-sm text-muted-foreground">
-                    No saved jobs match your search for "{searchQuery}".
+                    No saved jobs match your search for &quot;{searchQuery}&quot;.
                   </p>
                   <Button
                     variant="outline"

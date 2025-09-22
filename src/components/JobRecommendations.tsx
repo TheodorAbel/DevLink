@@ -128,7 +128,7 @@ const jobRecommendations: (Job & {
   }
 ];
 
-export function JobRecommendations({ onJobSelect }: JobRecommendationsProps) {
+export function JobRecommendations({ onJobSelect: _onJobSelect }: JobRecommendationsProps) {
   const [jobs, setJobs] = useState(jobRecommendations);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [lastAction, setLastAction] = useState<'liked' | 'passed' | null>(null);
@@ -216,7 +216,7 @@ export function JobRecommendations({ onJobSelect }: JobRecommendationsProps) {
             <Card className="p-8">
               <div className="text-center">
                 <Target className="h-16 w-16 text-blue-500 mx-auto mb-4" />
-                <h2 className="text-2xl font-bold mb-4">You've seen all recommendations!</h2>
+                <h2 className="text-2xl font-bold mb-4">You&apos;ve seen all recommendations!</h2>
                 <p className="text-muted-foreground mb-6">
                   Great job reviewing all job recommendations. New opportunities will appear as they match your profile.
                 </p>

@@ -12,13 +12,11 @@ import {
   Phone,
   Video,
   MoreVertical,
-  Building2,
   Circle,
   CheckCheck,
   Check,
   File,
   Image as ImageIcon,
-  Link as LinkIcon,
   ArrowLeft
 } from 'lucide-react';
 import { AnimatedBackground } from './AnimatedBackground';

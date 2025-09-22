@@ -1,9 +1,8 @@
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import { Badge } from "../ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
-import { Globe, MapPin, Users, Building, Linkedin, Mail, Phone, Briefcase } from "lucide-react";
+import { Globe, MapPin, Users, Building } from "lucide-react";
 import Link from "next/link";
 
 interface MediaItem { type: 'image' | 'video'; url: string; title?: string; }

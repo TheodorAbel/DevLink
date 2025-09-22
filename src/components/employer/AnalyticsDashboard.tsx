@@ -15,8 +15,6 @@ import {
   PieChart,
   Pie,
   Cell,
-  FunnelChart,
-  Funnel,
   LabelList
 } from 'recharts';
 import { 
@@ -269,7 +267,12 @@ export function AnalyticsDashboard() {
                     cy="50%"
                     outerRadius={80}
                     dataKey="value"
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    label={(props: unknown) => {
+                      const p = props as { name?: string; percent?: number };
+                      const name = p.name ?? '';
+                      const percent = typeof p.percent === 'number' ? p.percent : 0;
+                      return `${name} ${(percent * 100).toFixed(0)}%`;
+                    }}
                     labelLine={false}
                   >
                     {sourceBreakdownData.map((entry, index) => (

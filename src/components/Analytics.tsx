@@ -126,6 +126,8 @@ const careerRecommendations = [
 
 export function Analytics({ onBack: _onBack }: AnalyticsProps) {
   const [timeRange, setTimeRange] = useState('6months');
+  // reference to satisfy lint without changing UI
+  void _onBack;
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {

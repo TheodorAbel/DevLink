@@ -16,7 +16,6 @@ import { JobDetail } from '@/components/JobDetail';
 import RoleGuard from '@/components/RoleGuard';
 import { SeekerApplications } from '@/components/SeekerApplications';
 import { SaaSNotificationsPage } from '@/components/notifications/SaaSNotificationsPage';
-import { mockNotifications } from '@/data/mockNotifications';
 
 export default function SeekerPage() {
   const searchParams = useSearchParams();

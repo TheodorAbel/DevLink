@@ -7,9 +7,7 @@ import { Label } from './ui/label';
 import { Switch } from './ui/switch';
 import { useTheme } from '../lib/theme-context';
 import { 
-  Settings as SettingsIcon,
   Palette,
-  Bell,
   Shield,
   Eye,
   User,
@@ -24,7 +22,6 @@ import {
   Key,
   Download,
   Trash2,
-  Clock,
   Volume,
   VolumeX,
   BarChart3,
@@ -47,8 +44,9 @@ interface SettingsProps {
   onBack?: () => void;
 }
 
-export function Settings({ onBack }: SettingsProps) {
+export function Settings({ onBack: _onBack }: SettingsProps) {
   const { theme, setTheme } = useTheme();
+  void _onBack;
   
   const [settings, setSettings] = useState({
     autoAttachResume: true,
@@ -96,21 +94,22 @@ export function Settings({ onBack }: SettingsProps) {
     }
   });
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const updateSetting = (category: string, key: string, value: any) => {
     setSettings(prev => ({
       ...prev,
-      [category]: {
-        ...prev[category as keyof typeof prev],
-        [key]: value
-      }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      [category]: { ...(prev[category as keyof typeof prev] as any), [key]: value }
     }));
     toast.success('Setting updated');
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const updateTopLevelSetting = (key: string, value: any) => {
     setSettings(prev => ({
       ...prev,
-      [key]: value
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      [key]: value as any
     }));
     toast.success('Setting updated');
   };
@@ -179,7 +178,7 @@ export function Settings({ onBack }: SettingsProps) {
                           <Button
                             key={value}
                             variant={theme === value ? 'default' : 'outline'}
-                            onClick={() => setTheme(value)}
+                            onClick={() => setTheme(value as 'light' | 'dark' | 'system')}
                             className="h-16 flex-col gap-2"
                           >
                             <Icon className="h-5 w-5" />

@@ -236,6 +236,7 @@ class NotificationService {
   
   // Firebase Integration Hook (alternative to WebSocket)
   initializeFirebase(_config: unknown): void {
+    void _config;
     // TODO: Firebase initialization
     // import { initializeApp } from 'firebase/app';
     // import { getMessaging, onMessage } from 'firebase/messaging';
@@ -243,6 +244,7 @@ class NotificationService {
   
   // SignalR Integration Hook (for .NET backends)
   initializeSignalR(_hubUrl: string): void {
+    void _hubUrl;
     // TODO: SignalR initialization
     // import * as signalR from '@microsoft/signalr';
   }

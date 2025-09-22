@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -14,18 +13,16 @@ import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./ui/accordion";
 import { 
   User, 
-  Mail, 
   Lock, 
   Bell, 
   Palette, 
   Eye, 
   Shield, 
   Building, 
-  Users, 
+  
   MessageSquare, 
-  Calendar,
-  FileText,
-  Settings,
+  
+  
   Upload,
   Check,
   Plus,
@@ -43,7 +40,7 @@ interface EmployerSettingsProps {
 }
 
 export function EmployerSettings({ onBack }: EmployerSettingsProps) {
-  const [emailVerified, setEmailVerified] = useState(true);
+  const [emailVerified] = useState(true);
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [theme, setTheme] = useState("system");
   const [notifications, setNotifications] = useState({
@@ -83,7 +80,7 @@ export function EmployerSettings({ onBack }: EmployerSettingsProps) {
     { id: 3, name: "Mike Davis", email: "mike@techcorp.com", role: "Viewer", status: "Pending" }
   ]);
 
-  const [messageTemplates, setMessageTemplates] = useState([
+  const [messageTemplates] = useState([
     {
       id: 1,
       name: "Interview Invitation",

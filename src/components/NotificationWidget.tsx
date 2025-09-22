@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { Card, CardHeader, CardTitle, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
-import { Bell, ArrowRight, Briefcase, CheckCircle, Clock } from 'lucide-react';
+import { Bell, ArrowRight, Briefcase, Clock } from 'lucide-react';
 import { mockNotifications, getRelativeTime } from '@/data/mockNotifications';
 import { Notification } from '@/types/notification';
 

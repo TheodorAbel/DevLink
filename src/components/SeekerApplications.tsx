@@ -15,7 +15,7 @@ export type ApplicationItem = {
   company: string;
   location: string;
   appliedDate: string; // ISO or human readable
-  status: 'applied' | 'viewed' | 'interview' | 'accepted' | 'rejected';
+  status: 'applied' | 'viewed' | 'interview' | 'accepted' | 'rejected' | 'pending';
 };
 
 interface SeekerApplicationsProps {
@@ -24,7 +24,7 @@ interface SeekerApplicationsProps {
 
 const MOCK_APPLICATIONS: ApplicationItem[] = [
   { id: '1', jobTitle: 'Senior Frontend Developer', company: 'TechCorp', location: 'San Francisco, CA', appliedDate: '2024-01-15', status: 'interview' },
-  { id: '2', jobTitle: 'UX Designer', company: 'DesignStudio', location: 'Remote', appliedDate: '2024-01-18', status: 'pending' as any },
+  { id: '2', jobTitle: 'UX Designer', company: 'DesignStudio', location: 'Remote', appliedDate: '2024-01-18', status: 'pending' },
   { id: '3', jobTitle: 'Product Manager', company: 'StartupXYZ', location: 'New York, NY', appliedDate: '2024-01-15', status: 'rejected' },
   { id: '4', jobTitle: 'Data Scientist', company: 'DataCorp', location: 'Austin, TX', appliedDate: '2024-01-12', status: 'applied' },
 ];
@@ -53,7 +53,7 @@ export function SeekerApplications({ onOpenApplication }: SeekerApplicationsProp
     return MOCK_APPLICATIONS.filter((a) => {
       const text = `${a.jobTitle} ${a.company} ${a.location}`.toLowerCase();
       const matchesQ = text.includes(query.toLowerCase());
-      const matchesS = status === 'all' || a.status === (status as any);
+      const matchesS = status === 'all' || a.status === (status as ApplicationItem['status']);
       return matchesQ && matchesS;
     });
   }, [query, status]);
@@ -92,7 +92,7 @@ export function SeekerApplications({ onOpenApplication }: SeekerApplicationsProp
           </CardContent>
         </Card>
 
-        <Tabs value={tab} onValueChange={(v) => setTab(v as any)} className="space-y-4">
+        <Tabs value={tab} onValueChange={(v) => setTab(v as 'list' | 'board')} className="space-y-4">
           <TabsList>
             <TabsTrigger value="list">List</TabsTrigger>
             <TabsTrigger value="board">Board</TabsTrigger>
@@ -137,19 +137,19 @@ export function SeekerApplications({ onOpenApplication }: SeekerApplicationsProp
 
           <TabsContent value="board">
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-              {['applied','viewed','interview','accepted','rejected'].map((col) => (
+              {(['applied','viewed','interview','accepted','rejected'] as ApplicationItem['status'][]).map((col) => (
                 <Card key={col} className="min-h-[200px]">
                   <CardHeader>
                     <CardTitle className="capitalize">{col}</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    {filtered.filter(a => a.status === (col as any)).map(a => (
+                    {filtered.filter(a => a.status === col).map(a => (
                       <Button key={a.id} variant="outline" className="w-full justify-between" onClick={() => onOpenApplication(a.id)}>
                         <span className="truncate text-left">{a.jobTitle}</span>
                         <FileText className="h-4 w-4" />
                       </Button>
                     ))}
-                    {filtered.filter(a => a.status === (col as any)).length === 0 && (
+                    {filtered.filter(a => a.status === col).length === 0 && (
                       <div className="text-xs text-muted-foreground">No items</div>
                     )}
                   </CardContent>

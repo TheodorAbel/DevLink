@@ -14,7 +14,6 @@ import {
   AlertTriangle,
   Info,
   CheckCircle,
-  XCircle,
   Briefcase,
   MessageSquare,
   Shield,
@@ -151,7 +150,10 @@ export function NotificationCard({
                 <input
                   type="checkbox"
                   checked={isSelected}
-                  onChange={handleSelect}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    onSelect(notification.id);
+                  }}
                   className="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                   aria-label={`Select notification: ${notification.title}`}
                 />

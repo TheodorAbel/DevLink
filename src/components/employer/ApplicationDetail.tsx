@@ -1,10 +1,8 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
-import { Badge } from "./ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Separator } from "./ui/separator";
-import { ScrollArea } from "./ui/scroll-area";
 import { 
   ArrowLeft,
   Download,
@@ -25,6 +23,18 @@ import { SeekerProfileDrawer } from "./SeekerProfileDrawer";
 interface ApplicationDetailProps {
   applicationId: string;
   onBack: () => void;
+}
+
+type TimelineStatus = 'applied' | 'viewed' | 'interview_scheduled' | 'accepted' | 'rejected';
+type TimelineActor = 'system' | 'employer';
+interface TimelineEntry {
+  id: string;
+  type: TimelineStatus;
+  timestamp: string;
+  actor: TimelineActor;
+  actorName?: string;
+  actorEmail?: string;
+  details?: Record<string, unknown>;
 }
 
 // Mock data - in real app this would come from API
@@ -125,13 +135,13 @@ const mockApplicationData = {
 export function ApplicationDetail({ applicationId, onBack }: ApplicationDetailProps) {
   const [internalNotes, setInternalNotes] = useState(mockApplicationData.internalNotes);
   const [isProfileDrawerOpen, setIsProfileDrawerOpen] = useState(false);
-  const [timeline, setTimeline] = useState(mockApplicationData.timeline);
-  const [currentStatus, setCurrentStatus] = useState(mockApplicationData.status);
+  const [timeline, setTimeline] = useState<TimelineEntry[]>(mockApplicationData.timeline as unknown as TimelineEntry[]);
+  const [currentStatus, setCurrentStatus] = useState<TimelineStatus>(mockApplicationData.status as TimelineStatus);
 
   const data = mockApplicationData; // In real app, fetch by applicationId
 
   const handleScheduleInterview = (interviewData: any) => {
-    const newEntry = {
+    const newEntry: TimelineEntry = {
       id: `timeline_${Date.now()}`,
       type: 'interview_scheduled' as const,
       timestamp: new Date().toISOString(),
@@ -151,7 +161,7 @@ export function ApplicationDetail({ applicationId, onBack }: ApplicationDetailPr
   };
 
   const handleAcceptCandidate = (message: string) => {
-    const newEntry = {
+    const newEntry: TimelineEntry = {
       id: `timeline_${Date.now()}`,
       type: 'accepted' as const,
       timestamp: new Date().toISOString(),
@@ -166,7 +176,7 @@ export function ApplicationDetail({ applicationId, onBack }: ApplicationDetailPr
   };
 
   const handleRejectCandidate = (message: string) => {
-    const newEntry = {
+    const newEntry: TimelineEntry = {
       id: `timeline_${Date.now()}`,
       type: 'rejected' as const,
       timestamp: new Date().toISOString(),
