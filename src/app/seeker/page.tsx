@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Navigation } from '@/components/Navigation';
 import { Dashboard } from '@/components/Dashboard';
@@ -17,7 +17,7 @@ import RoleGuard from '@/components/RoleGuard';
 import { SeekerApplications } from '@/components/SeekerApplications';
 import { SaaSNotificationsPage } from '@/components/notifications/SaaSNotificationsPage';
 
-export default function SeekerPage() {
+function SeekerPageInner() {
   const searchParams = useSearchParams();
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [profileTab, setProfileTab] = useState<'personal' | 'skills' | 'experience' | 'education' | 'resume'>('personal');
@@ -105,5 +105,13 @@ export default function SeekerPage() {
         </main>
       </div>
     </RoleGuard>
+  );
+}
+
+export default function SeekerPage() {
+  return (
+    <Suspense fallback={null}>
+      <SeekerPageInner />
+    </Suspense>
   );
 }
