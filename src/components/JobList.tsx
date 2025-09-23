@@ -348,12 +348,14 @@ export function JobList({ onJobSelect: _onJobSelect }: JobListProps) {
 
   // Handle job card click to show detail view
   const handleJobView = (_jobId?: string) => {
+    void _jobId;
     setAutoOpenApply(false);
     setShowJobDetail(true);
   };
 
   // Handle apply button click to show detail view with auto-open apply
   const handleJobApply = (_jobId?: string) => {
+    void _jobId;
     setAutoOpenApply(true);
     setShowJobDetail(true);
   };
