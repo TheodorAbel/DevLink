@@ -347,13 +347,13 @@ export function JobList({ onJobSelect: _onJobSelect }: JobListProps) {
   };
 
   // Handle job card click to show detail view
-  const handleJobView = () => {
+  const handleJobView = (_jobId?: string) => {
     setAutoOpenApply(false);
     setShowJobDetail(true);
   };
 
   // Handle apply button click to show detail view with auto-open apply
-  const handleJobApply = () => {
+  const handleJobApply = (_jobId?: string) => {
     setAutoOpenApply(true);
     setShowJobDetail(true);
   };
