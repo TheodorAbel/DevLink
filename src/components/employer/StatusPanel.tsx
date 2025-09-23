@@ -11,8 +11,7 @@ import {
   CheckCircle, 
   XCircle,
   MessageSquare,
-  FileText,
-  Plus
+  FileText
 } from "lucide-react";
 import { SchedulerModal } from "./SchedulerModal";
 import { MessageTemplateModal } from "./MessageTemplateModal";
@@ -24,9 +23,23 @@ interface StatusPanelProps {
   jobTitle: string;
   internalNotes: string;
   onUpdateNotes: (notes: string) => void;
-  onScheduleInterview: (data: any) => void;
+  onScheduleInterview: (data: InterviewData) => void;
   onAcceptCandidate: (message: string) => void;
   onRejectCandidate: (message: string) => void;
+}
+
+// Keep in sync with SchedulerModal InterviewData
+interface InterviewData {
+  date: string;
+  time: string;
+  duration: number;
+  timezone: string;
+  meetingType: 'in-person' | 'video' | 'phone';
+  meetingLink?: string;
+  location?: string;
+  interviewers: string[];
+  assessmentTasks: string[];
+  notes: string;
 }
 
 const statusConfig = {

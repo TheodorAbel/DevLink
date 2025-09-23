@@ -5,7 +5,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
-import { Separator } from "./ui/separator";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible";
 import { 
   Download, 
@@ -20,7 +19,6 @@ import {
   Calendar,
   Briefcase,
   GraduationCap,
-  FileText,
   Eye
 } from "lucide-react";
 
@@ -93,7 +91,7 @@ export function SeekerProfileDrawer({
     setExpandedEducation(prev => 
       prev.includes(id) 
         ? prev.filter(eduId => eduId !== id)
-        : [...prev, eduId]
+        : [...prev, id]
     );
   };
 
@@ -239,7 +237,7 @@ export function SeekerProfileDrawer({
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {profile.experience.map((exp, index) => (
+              {profile.experience.map((exp) => (
                 <div key={exp.id} className="border-l-2 border-border pl-4 pb-4 last:pb-0">
                   <Collapsible>
                     <CollapsibleTrigger 

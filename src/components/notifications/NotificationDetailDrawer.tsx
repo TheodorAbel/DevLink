@@ -24,8 +24,7 @@ import {
   CreditCard,
   Sparkles,
   AlertTriangle,
-  Info,
-  ArrowRight
+  Info
 } from 'lucide-react';
 import { Notification } from '@/types/notification';
 import { getRelativeTime } from '@/data/mockNotifications';

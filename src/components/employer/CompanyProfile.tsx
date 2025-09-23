@@ -931,7 +931,7 @@ export function CompanyProfile() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label>Remote Policy</Label>
-                <Select value={profileData.remotePolicy} onValueChange={(v) => setProfileData(prev => ({...prev, remotePolicy: v as any}))}>
+                <Select value={profileData.remotePolicy} onValueChange={(v: 'Remote-first' | 'Hybrid' | 'Onsite') => setProfileData(prev => ({...prev, remotePolicy: v}))}>
                   <SelectTrigger><SelectValue placeholder="Select policy"/></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Remote-first">Remote-first</SelectItem>

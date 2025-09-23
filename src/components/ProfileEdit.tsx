@@ -35,6 +35,26 @@ interface ProfileEditProps {
   initialTab?: 'personal' | 'skills' | 'experience' | 'education' | 'resume';
 }
 
+type Experience = {
+  id: string;
+  title: string;
+  company: string;
+  startDate: string;
+  endDate: string;
+  location: string;
+  description: string;
+};
+
+type Education = {
+  id: string;
+  degree: string;
+  school: string;
+  startDate: string;
+  endDate: string;
+  location: string;
+  gpa?: string;
+};
+
 // Mock profile data
 const initialProfile = {
   personalInfo: {
@@ -183,12 +203,11 @@ export function ProfileEdit({ onBack: _onBack, initialTab = 'personal' }: Profil
     setEditingExperience(newExp.id);
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const saveExperience = (id: string, data: any) => {
+  const saveExperience = (id: string, data: Partial<Experience>) => {
     setProfile(prev => ({
       ...prev,
       experience: prev.experience.map(exp => 
-        exp.id === id ? { ...exp, ...data } : exp
+        exp.id === id ? { ...exp, ...(data as Experience) } : exp
       )
     }));
     setEditingExperience(null);
@@ -220,12 +239,11 @@ export function ProfileEdit({ onBack: _onBack, initialTab = 'personal' }: Profil
     setEditingEducation(newEdu.id);
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const saveEducation = (id: string, data: any) => {
+  const saveEducation = (id: string, data: Partial<Education>) => {
     setProfile(prev => ({
       ...prev,
       education: prev.education.map(edu => 
-        edu.id === id ? { ...edu, ...data } : edu
+        edu.id === id ? { ...edu, ...(data as Education) } : edu
       )
     }));
     setEditingEducation(null);
@@ -506,7 +524,7 @@ export function ProfileEdit({ onBack: _onBack, initialTab = 'personal' }: Profil
                         experience={exp}
                         isEditing={editingExperience === exp.id}
                         onEdit={() => setEditingExperience(exp.id)}
-                        onSave={(data: any) => saveExperience(exp.id, data)}
+                        onSave={(data: Experience) => saveExperience(exp.id, data)}
                         onCancel={() => setEditingExperience(null)}
                         onRemove={() => removeExperience(exp.id)}
                       />
@@ -550,7 +568,7 @@ export function ProfileEdit({ onBack: _onBack, initialTab = 'personal' }: Profil
                         education={edu}
                         isEditing={editingEducation === edu.id}
                         onEdit={() => setEditingEducation(edu.id)}
-                        onSave={(data: any) => saveEducation(edu.id, data)}
+                        onSave={(data: Education) => saveEducation(edu.id, data)}
                         onCancel={() => setEditingEducation(null)}
                         onRemove={() => removeEducation(edu.id)}
                       />
@@ -916,7 +934,12 @@ function EducationCard({ education, isEditing, onEdit, onSave, onCancel, onRemov
 }
 
 // Profile Preview Component
-function ProfilePreview({ profile }: any) {
+function ProfilePreview({ profile }: { profile: {
+  personalInfo: { firstName: string; lastName: string; bio: string; location: string; email: string };
+  skills: string[];
+  experience: Experience[];
+  education: Education[];
+} }) {
   return (
     <div className="space-y-6">
       <div className="text-center pb-6 border-b">
@@ -944,7 +967,7 @@ function ProfilePreview({ profile }: any) {
       <div>
         <h3 className="font-semibold mb-3">Skills</h3>
         <div className="flex flex-wrap gap-2">
-          {profile.skills.map((skill: string) => (
+          {profile.skills.map((skill) => (
             <Badge key={skill} variant="secondary">{skill}</Badge>
           ))}
         </div>
@@ -953,7 +976,7 @@ function ProfilePreview({ profile }: any) {
       <div>
         <h3 className="font-semibold mb-3">Experience</h3>
         <div className="space-y-4">
-          {profile.experience.map((exp: any) => (
+          {profile.experience.map((exp) => (
             <div key={exp.id}>
               <h4 className="font-medium">{exp.title}</h4>
               <p className="text-blue-600">{exp.company}</p>
@@ -969,7 +992,7 @@ function ProfilePreview({ profile }: any) {
       <div>
         <h3 className="font-semibold mb-3">Education</h3>
         <div className="space-y-4">
-          {profile.education.map((edu: any) => (
+          {profile.education.map((edu) => (
             <div key={edu.id}>
               <h4 className="font-medium">{edu.degree}</h4>
               <p className="text-blue-600">{edu.school}</p>

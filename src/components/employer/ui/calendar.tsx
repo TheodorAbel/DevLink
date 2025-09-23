@@ -1,9 +1,8 @@
-/* eslint-disable react/prop-types */
 "use client";
 
 import * as React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { DayPicker } from "react-day-picker";
+import { DayPicker, type DayPickerProps } from "react-day-picker";
 
 import { cn } from "./utils";
 import { buttonVariants } from "./button";
@@ -61,13 +60,13 @@ function Calendar({
         ...classNames,
       }}
       components={{
-        IconLeft: (p: any) => (
-          <ChevronLeft className={cn("size-4", p.className)} {...p} />
+        IconLeft: ({ className }: { className?: string }) => (
+          <ChevronLeft className={cn("size-4", className)} />
         ),
-        IconRight: (p: any) => (
-          <ChevronRight className={cn("size-4", p.className)} {...p} />
+        IconRight: ({ className }: { className?: string }) => (
+          <ChevronRight className={cn("size-4", className)} />
         ),
-      } as any}
+      } as DayPickerProps['components']}
       {...props}
     />
   );

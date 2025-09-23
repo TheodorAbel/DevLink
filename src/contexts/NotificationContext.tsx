@@ -39,7 +39,7 @@ const initialState: NotificationState = {
   notifications: [],
   filteredNotifications: [],
   preferences: null,
-  stats: { total: 0, unread: 0, byType: {} as any, byPriority: {} as any },
+  stats: { total: 0, unread: 0, byType: {} as Record<string, number>, byPriority: {} as Record<string, number> },
   loading: false,
   error: null,
   filter: {},
@@ -73,7 +73,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     dispatch({ type: 'SET_NOTIFICATIONS', payload: [] });
   }, []);
   
-  const markAsRead = useCallback(async (ids: string[]) => {
+  const markAsRead = useCallback(async (_ids: string[]) => {
     // TODO: API call
   }, []);
   

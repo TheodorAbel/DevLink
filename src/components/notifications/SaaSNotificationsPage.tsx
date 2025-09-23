@@ -7,9 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { 
   Bell, 
@@ -28,19 +27,16 @@ import {
   Search,
   Filter,
   Calendar,
-  ChevronDown,
   X,
   Grid3X3,
   List,
   Trash2,
   MoreHorizontal,
   CheckSquare,
-  Square,
   Loader2,
   RefreshCw,
   Archive,
-  Star,
-  Zap
+  
 } from 'lucide-react';
 import { mockNotifications, getRelativeTime } from '@/data/mockNotifications';
 import { Notification } from '@/types/notification';
@@ -673,7 +669,7 @@ export function SaaSNotificationsPage({ onNavigateToSettings }: SaaSNotification
                 )}
                 {searchQuery && (
                   <Badge variant="secondary" className="gap-1">
-                    Search: "{searchQuery}"
+                    Search: &quot;{searchQuery}&quot;
                     <X 
                       className="h-3 w-3 cursor-pointer" 
                       onClick={() => setSearchQuery('')}
