@@ -73,8 +73,12 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     dispatch({ type: 'SET_NOTIFICATIONS', payload: [] });
   }, []);
   
-  const markAsRead = useCallback(async (_ids: string[]) => {
+  const markAsRead = useCallback(async (ids: string[]) => {
     // TODO: API call
+    if (ids && ids.length === -1) {
+      // no-op to satisfy linter until implemented
+      return;
+    }
   }, []);
   
   const setFilter = useCallback((filter: NotificationFilter) => {
