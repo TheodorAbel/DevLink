@@ -1,7 +1,7 @@
 // src/middleware.ts
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs";
 import { ROLES } from "@/lib/roles";
 
 export const config = {
@@ -11,29 +11,8 @@ export const config = {
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next();
 
-  // ✅ Supabase Edge client with cookie adapter
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      global: {
-        fetch: fetch,
-      },
-      auth: {
-        detectSessionInUrl: false,
-        storage: {
-          getItem: (key: string): string | null =>
-            req.cookies.get(key)?.value ?? null,
-          setItem: (key: string, value: string): void => {
-            res.cookies.set({ name: key, value, path: "/" });
-          },
-          removeItem: (key: string): void => {
-            res.cookies.delete({ name: key, path: "/" });
-          },
-        },
-      },
-    }
-  );
+  // ✅ Edge-safe Supabase client (no Node-only APIs)
+  const supabase = createMiddlewareClient({ req, res });
 
   // 1️⃣ Get user session
   const {
