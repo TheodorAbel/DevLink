@@ -1,3 +1,4 @@
+/* eslint-disable react/prop-types */
 "use client";
 
 import * as React from "react";
@@ -60,13 +61,13 @@ function Calendar({
         ...classNames,
       }}
       components={{
-        IconLeft: ({ className, ...props }) => (
-          <ChevronLeft className={cn("size-4", className)} {...props} />
+        IconLeft: (p: any) => (
+          <ChevronLeft className={cn("size-4", p.className)} {...p} />
         ),
-        IconRight: ({ className, ...props }) => (
-          <ChevronRight className={cn("size-4", className)} {...props} />
+        IconRight: (p: any) => (
+          <ChevronRight className={cn("size-4", p.className)} {...p} />
         ),
-      }}
+      } as any}
       {...props}
     />
   );

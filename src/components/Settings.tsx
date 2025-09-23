@@ -468,7 +468,7 @@ export function Settings({ onBack: _onBack }: SettingsProps) {
                       <div className="space-y-1">
                         <Label>Show online status</Label>
                         <p className="text-sm text-muted-foreground">
-                          Display when you're active on the platform
+                          Display when you&#39;re active on the platform
                         </p>
                       </div>
                       <Switch

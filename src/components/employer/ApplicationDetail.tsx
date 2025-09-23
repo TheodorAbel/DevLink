@@ -132,15 +132,24 @@ const mockApplicationData = {
   ]
 };
 
-export function ApplicationDetail({ applicationId, onBack }: ApplicationDetailProps) {
+export function ApplicationDetail({ applicationId: _applicationId, onBack }: ApplicationDetailProps) {
   const [internalNotes, setInternalNotes] = useState(mockApplicationData.internalNotes);
   const [isProfileDrawerOpen, setIsProfileDrawerOpen] = useState(false);
   const [timeline, setTimeline] = useState<TimelineEntry[]>(mockApplicationData.timeline as unknown as TimelineEntry[]);
   const [currentStatus, setCurrentStatus] = useState<TimelineStatus>(mockApplicationData.status as TimelineStatus);
 
   const data = mockApplicationData; // In real app, fetch by applicationId
+  void _applicationId;
 
-  const handleScheduleInterview = (interviewData: any) => {
+  interface InterviewScheduleData {
+    date: string;
+    time: string;
+    meetingType: 'in-person' | 'video' | 'phone';
+    meetingLink?: string;
+    location?: string;
+  }
+
+  const handleScheduleInterview = (interviewData: InterviewScheduleData) => {
     const newEntry: TimelineEntry = {
       id: `timeline_${Date.now()}`,
       type: 'interview_scheduled' as const,

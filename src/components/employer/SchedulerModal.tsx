@@ -5,8 +5,7 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { Badge } from "./ui/badge";
-import { Calendar, Clock, Link, Plus, X } from "lucide-react";
+import { Calendar, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 
 interface SchedulerModalProps {
@@ -212,7 +211,7 @@ export function SchedulerModal({
                   key={type.value}
                   variant={formData.meetingType === type.value ? 'default' : 'outline'}
                   className="h-auto p-3"
-                  onClick={() => setFormData(prev => ({ ...prev, meetingType: type.value as any }))}
+                  onClick={() => setFormData(prev => ({ ...prev, meetingType: type.value as InterviewData['meetingType'] }))}
                 >
                   <div className="text-center">
                     <div className="text-lg mb-1">{type.icon}</div>

@@ -129,6 +129,7 @@ const jobRecommendations: (Job & {
 ];
 
 export function JobRecommendations({ onJobSelect: _onJobSelect }: JobRecommendationsProps) {
+  void _onJobSelect;
   const [jobs, setJobs] = useState(jobRecommendations);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [lastAction, setLastAction] = useState<'liked' | 'passed' | null>(null);

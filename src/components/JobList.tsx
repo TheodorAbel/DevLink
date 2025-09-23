@@ -9,7 +9,6 @@ import { Badge } from './ui/badge';
 import { 
   Search, 
   MapPin, 
-  DollarSign,
   SlidersHorizontal,
   Bell,
   Eye,
@@ -199,7 +198,7 @@ export function JobList({ onJobSelect: _onJobSelect }: JobListProps) {
   const jobsPerPage = 6;
   
   // New state for job detail view
-  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  // selectedJobId removed since it was not being used to render anything
   const [showJobDetail, setShowJobDetail] = useState(false);
   const [autoOpenApply, setAutoOpenApply] = useState(false);
 
@@ -349,14 +348,12 @@ export function JobList({ onJobSelect: _onJobSelect }: JobListProps) {
 
   // Handle job card click to show detail view
   const handleJobView = (jobId: string) => {
-    setSelectedJobId(jobId);
     setAutoOpenApply(false);
     setShowJobDetail(true);
   };
 
   // Handle apply button click to show detail view with auto-open apply
   const handleJobApply = (jobId: string) => {
-    setSelectedJobId(jobId);
     setAutoOpenApply(true);
     setShowJobDetail(true);
   };
@@ -365,7 +362,6 @@ export function JobList({ onJobSelect: _onJobSelect }: JobListProps) {
   const handleBackToJobs = () => {
     setShowJobDetail(false);
     setAutoOpenApply(false);
-    setSelectedJobId(null);
   };
 
   // If showing job detail, render JobDetail component

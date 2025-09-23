@@ -114,10 +114,7 @@ export function NotificationCard({
     onDelete(notification.id);
   };
 
-  const handleSelect = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onSelect(notification.id);
-  };
+  // removed unused handleSelect
 
   return (
     <motion.div

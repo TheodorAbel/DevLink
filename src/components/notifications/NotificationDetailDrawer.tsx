@@ -4,8 +4,6 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { 
   X,
   Clock,
@@ -16,7 +14,6 @@ import {
   Share2,
   BookmarkPlus,
   Calendar,
-  User,
   Building2,
   MapPin,
   DollarSign,
@@ -27,7 +24,6 @@ import {
   CreditCard,
   Sparkles,
   AlertTriangle,
-  CheckCircle,
   Info,
   ArrowRight
 } from 'lucide-react';
@@ -250,7 +246,7 @@ export function NotificationDetailDrawer({
         text: notification.message,
         url: window.location.href
       });
-    } catch (error) {
+    } catch {
       // Fallback to clipboard
       navigator.clipboard.writeText(`${notification.title}\n\n${notification.message}`);
     }

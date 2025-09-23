@@ -5,15 +5,8 @@ import { Badge } from "./ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Card, CardContent } from "./ui/card";
 import { JobCard } from "./JobCard";
-import { Search, Filter, Grid, List, Plus } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "./ui/dropdown-menu";
+import { Search, Grid, List, Plus } from "lucide-react";
+// Dropdown menu imports removed as they were unused
 
 interface Job {
   id: string;

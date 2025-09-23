@@ -23,16 +23,6 @@ import {
   Twitter,
   Github,
   Youtube,
-  PanelLeftClose,
-  PanelLeftOpen,
-  Image as ImageIcon,
-  Users2,
-  Contact,
-  Briefcase,
-  Mail,
-  Phone,
-  MapPin as MapPinIcon,
-  Globe as GlobeIcon,
   PanelLeft,
   Play,
   Trash2
@@ -189,11 +179,11 @@ export function CompanyProfile() {
     }
   });
 
-  const [logoFile, setLogoFile] = useState<File | null>(null);
+  // Removed unused logoFile state
 
   const handleSave = () => {
     // Validate media before saving
-    const { media } = profileData;
+    const media = profileData.media ?? [];
     const imageCount = media.filter(m => m.type === 'image').length;
     const videoCount = media.filter(m => m.type === 'video').length;
     
@@ -207,7 +197,7 @@ export function CompanyProfile() {
       return;
     }
     
-    const longVideo = media.find(m => m.type === 'video' && m.duration > MEDIA_LIMITS.MAX_VIDEO_DURATION);
+    const longVideo = media.find(m => m.type === 'video' && (m.duration ?? 0) > MEDIA_LIMITS.MAX_VIDEO_DURATION);
     if (longVideo) {
       toast.error(`Videos must be under ${Math.floor(MEDIA_LIMITS.MAX_VIDEO_DURATION / 60)} minutes`);
       return;
@@ -232,7 +222,6 @@ export function CompanyProfile() {
       return;
     }
     
-    setLogoFile(file);
     const reader = new FileReader();
     reader.onload = (e) => {
       setProfileData(prev => ({ ...prev, logo: e.target?.result as string }));
@@ -297,7 +286,7 @@ export function CompanyProfile() {
   };
   
   const handleMediaDelete = (index: number) => {
-    const newMedia = [...profileData.media];
+    const newMedia = [...(profileData.media ?? [])];
     newMedia.splice(index, 1);
     setProfileData(prev => ({
       ...prev,
@@ -533,9 +522,9 @@ export function CompanyProfile() {
                             </svg>
                           </div>
                         </div>
-                        {item.duration > 0 && (
+                        {(item.duration ?? 0) > 0 && (
                           <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded">
-                            {`${Math.floor(item.duration / 60)}:${(item.duration % 60).toString().padStart(2, '0')}`}
+                            {`${Math.floor((item.duration ?? 0) / 60)}:${(((item.duration ?? 0) % 60).toString()).padStart(2, '0')}`}
                           </div>
                         )}
                       </div>
@@ -677,7 +666,7 @@ export function CompanyProfile() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-medium">Company Profile</h1>
-          <p className="text-muted-foreground">Manage your company's public profile</p>
+          <p className="text-muted-foreground">Manage your company&#39;s public profile</p>
         </div>
         
         <div className="flex items-center gap-2">
@@ -728,7 +717,7 @@ export function CompanyProfile() {
               <div className="mt-4 pt-4 border-t border-border">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <h4 className="font-medium">What's visible to job seekers</h4>
+                    <h4 className="font-medium">What&#39;s visible to job seekers</h4>
                     <p className="text-sm text-muted-foreground">
                       Toggle sections to control what appears on your public profile.
                     </p>

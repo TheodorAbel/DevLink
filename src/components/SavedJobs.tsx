@@ -15,8 +15,7 @@ import {
   Grid,
   List,
   Search,
-  BookmarkMinus,
-  ExternalLink
+  BookmarkMinus
 } from 'lucide-react';
 import { AnimatedBackground } from './AnimatedBackground';
 import { Input } from './ui/input';
@@ -115,7 +114,6 @@ export function SavedJobs({ onJobSelect }: SavedJobsProps) {
   // State for job detail view
   const [showJobDetail, setShowJobDetail] = useState(false);
   const [autoOpenApply, setAutoOpenApply] = useState(false);
-  const [selectedJobDetail, setSelectedJobDetail] = useState<string | null>(null);
 
   // Group jobs by recency
   const recentJobs = jobs.filter(job => {
@@ -188,7 +186,6 @@ export function SavedJobs({ onJobSelect }: SavedJobsProps) {
   const handleJobView = (jobId: string) => {
     setAutoOpenApply(false);
     setShowJobDetail(true);
-    setSelectedJobDetail(jobId);
     onJobSelect?.(jobId);
   };
 
@@ -196,7 +193,6 @@ export function SavedJobs({ onJobSelect }: SavedJobsProps) {
   const handleJobApply = (jobId: string) => {
     setAutoOpenApply(true);
     setShowJobDetail(true);
-    setSelectedJobDetail(jobId);
     onJobSelect?.(jobId);
   };
 

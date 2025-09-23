@@ -9,10 +9,8 @@ import {
   Briefcase, 
   Users, 
   Eye, 
-  Calendar,
   ArrowLeft,
-  Plus,
-  Filter
+  Plus
 } from "lucide-react";
 
 interface Job {

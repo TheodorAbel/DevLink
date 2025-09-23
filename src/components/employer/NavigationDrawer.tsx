@@ -12,9 +12,7 @@ import {
   BarChart, 
   Settings, 
   LogOut,
-  User,
   Briefcase,
-  Menu,
   ChevronLeft,
   ChevronRight
 } from "lucide-react";

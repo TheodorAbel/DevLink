@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import { Avatar, AvatarFallback } from "./ui/avatar";
 import { 
   Clock, 
   Eye, 
@@ -9,7 +9,6 @@ import {
   CheckCircle, 
   XCircle,
   MessageSquare,
-  User,
   Bot
 } from "lucide-react";
 
@@ -100,7 +99,6 @@ export function ApplicationTimeline({ entries, candidateName }: ApplicationTimel
   };
 
   const renderEntryDetails = (entry: TimelineEntry) => {
-    const config = timelineConfig[entry.type];
     
     switch (entry.type) {
       case 'applied':

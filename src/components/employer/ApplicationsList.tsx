@@ -58,6 +58,7 @@ export function ApplicationsList({
   onMessageCandidate,
   viewMode = 'card'
 }: ApplicationsListProps) {
+  void _jobId;
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('newest');
