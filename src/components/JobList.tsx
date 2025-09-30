@@ -36,6 +36,7 @@ import {
 } from './ui/sheet';
 import { Slider } from './ui/slider';
 import { toast } from 'sonner';
+import { ApplicantCompanyProfileDrawer } from './ApplicantCompanyProfileDrawer';
 
 // Mock data - expanded for pagination testing
 const mockJobs: Job[] = [
@@ -201,6 +202,8 @@ export function JobList({ onJobSelect: _onJobSelect }: JobListProps) {
   // selectedJobId removed since it was not being used to render anything
   const [showJobDetail, setShowJobDetail] = useState(false);
   const [autoOpenApply, setAutoOpenApply] = useState(false);
+  const [companyOpen, setCompanyOpen] = useState(false);
+  const [companyData, setCompanyData] = useState<null | Parameters<typeof ApplicantCompanyProfileDrawer>[0]["company"]>(null);
 
   // State for job alert panel
   const [showJobAlertPanel, setShowJobAlertPanel] = useState(false);
@@ -364,6 +367,39 @@ export function JobList({ onJobSelect: _onJobSelect }: JobListProps) {
   const handleBackToJobs = () => {
     setShowJobDetail(false);
     setAutoOpenApply(false);
+  };
+
+  const buildMockCompany = (job: Job): NonNullable<Parameters<typeof ApplicantCompanyProfileDrawer>[0]["company"]> => ({
+    id: job.id,
+    name: job.company,
+    logo: '',
+    coverImage: 'https://images.unsplash.com/photo-1496307042754-b4aa456c4a2d?q=80&w=1600&auto=format&fit=crop',
+    industry: 'Technology',
+    companySize: '200-500 employees',
+    location: job.location,
+    website: 'https://example.com',
+    founded: '2018',
+    about: `${job.company} is a leading organization focused on innovation and delivering high-quality products and services to customers worldwide.`,
+    culture: 'We value collaboration, continuous learning, and customer obsession.',
+    media: [
+      { type: 'image', url: 'https://images.unsplash.com/photo-1556761175-4b46a572b786?q=80&w=1200&auto=format&fit=crop', title: 'Office' },
+      { type: 'image', url: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?q=80&w=1200&auto=format&fit=crop', title: 'Team' },
+    ],
+    leadership: [
+      { name: 'Alex Johnson', role: 'CEO' },
+      { name: 'Taylor Smith', role: 'CTO' },
+    ],
+    hiringProcess: ['Application Review', 'Technical Interview', 'Final Interview', 'Offer'],
+    contact: { email: 'contact@example.com', phone: '+1 (555) 123-4567', address: job.location },
+    openPositions: [
+      { id: job.id, title: job.title, type: job.type, location: job.location },
+    ],
+  });
+
+  const openCompany = (e: React.MouseEvent, job: Job) => {
+    e.stopPropagation();
+    setCompanyData(buildMockCompany(job));
+    setCompanyOpen(true);
   };
 
   // If showing job detail, render JobDetail component
@@ -558,8 +594,8 @@ export function JobList({ onJobSelect: _onJobSelect }: JobListProps) {
               animate={{ opacity: 1 }}
               transition={{ delay: 0.2 }}
               className={`grid gap-4 ${
-                viewMode === 'grid' 
-                  ? 'grid-cols-1 lg:grid-cols-2' 
+                viewMode === 'grid'
+                  ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-2'
                   : 'grid-cols-1'
               }`}
             >
@@ -656,7 +692,13 @@ export function JobList({ onJobSelect: _onJobSelect }: JobListProps) {
                         onClick={() => handleJobView(job.id)}
                       >
                         <h4 className="font-medium text-sm line-clamp-1">{job.title}</h4>
-                        <p className="text-xs text-muted-foreground">{job.company}</p>
+                        <button
+                          type="button"
+                          onClick={(e) => openCompany(e, job)}
+                          className="text-left text-xs text-muted-foreground hover:text-blue-600 hover:underline"
+                        >
+                          {job.company}
+                        </button>
                         <Badge variant="outline" className="text-xs mt-1">{job.type}</Badge>
                       </motion.div>
                     ))}
@@ -718,6 +760,7 @@ export function JobList({ onJobSelect: _onJobSelect }: JobListProps) {
           </div>
         </div>
       </div>
+      <ApplicantCompanyProfileDrawer open={companyOpen} onOpenChange={setCompanyOpen} company={companyData} />
 
       {/* Job Alert Modal (Sheet) */}
       <Sheet open={showJobAlertPanel} onOpenChange={(o) => setShowJobAlertPanel(o)}>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Menu, 
@@ -13,7 +13,9 @@ import {
   BarChart3, 
   Target,
   Bell,
-  LogOut
+  LogOut,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { Button } from './ui/button';
 
@@ -37,13 +39,60 @@ const menuItems = [
 
 export function Navigation({ currentPage, onPageChange }: NavigationProps) {
   const [isOpen, setIsOpen] = useState(false);
+  // Desktop collapse state
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    try {
+      const v = window.localStorage.getItem('seeker_sidebar_collapsed');
+      return v === '1';
+    } catch {
+      return false;
+    }
+  });
 
   const toggleMenu = () => setIsOpen(!isOpen);
+
+  // Track desktop breakpoint to avoid using window directly during render
+  const [isDesktop, setIsDesktop] = useState(false);
+  useEffect(() => {
+    const update = () => setIsDesktop(typeof window !== 'undefined' ? window.innerWidth >= 1024 : false);
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
 
   const handleItemClick = (itemId: string) => {
     onPageChange(itemId);
     setIsOpen(false);
   };
+
+  const handleTopButtonClick = () => {
+    if (isDesktop) {
+      // Desktop: collapse/expand sidebar
+      toggleCollapsed();
+    } else {
+      // Mobile/Tablet: open/close slide-in menu
+      toggleMenu();
+    }
+  };
+
+  const toggleCollapsed = () => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      try {
+        window.localStorage.setItem('seeker_sidebar_collapsed', next ? '1' : '0');
+      } catch {}
+      return next;
+    });
+  };
+
+  // Expose sidebar width via CSS var for responsive padding on pages
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      const val = isDesktop ? (collapsed ? '4rem' : '16rem') : '0px';
+      document.documentElement.style.setProperty('--seeker-sidebar-width', val);
+    }
+  }, [collapsed, isDesktop]);
 
   return (
     <>
@@ -51,10 +100,15 @@ export function Navigation({ currentPage, onPageChange }: NavigationProps) {
       <Button
         variant="outline"
         size="icon"
-        onClick={toggleMenu}
-        className="fixed top-4 left-4 z-50"
+        onClick={handleTopButtonClick}
+        className="fixed left-4 z-50 top-4 lg:top-[calc(var(--header-height,4rem)+0.5rem)]"
+        aria-label="Toggle menu"
+        title={isDesktop ? (collapsed ? 'Expand sidebar' : 'Collapse sidebar') : (isOpen ? 'Close menu' : 'Open menu')}
       >
-        {isOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+        {isDesktop
+          ? (collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />)
+          : (isOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />)
+        }
       </Button>
 
       {/* Backdrop */}
@@ -64,21 +118,21 @@ export function Navigation({ currentPage, onPageChange }: NavigationProps) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 z-40"
+            className="fixed inset-0 bg-black/50 z-40 lg:hidden"
             onClick={() => setIsOpen(false)}
           />
         )}
       </AnimatePresence>
 
-      {/* Sidebar */}
+      {/* Sidebar (Mobile/Tablet slide-in) */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
             initial={{ x: -300 }}
             animate={{ x: 0 }}
             exit={{ x: -300 }}
-            transition={{ type: "spring", damping: 30, stiffness: 300 }}
-            className="fixed left-0 top-0 h-full w-64 bg-white shadow-lg z-50"
+            transition={{ type: 'tween', duration: 0.3, ease: 'easeInOut' }}
+            className="fixed left-0 top-0 h-full w-64 bg-white shadow-lg z-50 lg:hidden"
           >
             <div className="p-6">
               <h2 className="text-lg font-semibold mb-6">Menu</h2>
@@ -100,7 +154,7 @@ export function Navigation({ currentPage, onPageChange }: NavigationProps) {
                       onClick={() => handleItemClick(item.id)}
                     >
                       <Icon className="h-4 w-4" />
-                      {item.label}
+                      <span className="hidden md:inline">{item.label}</span>
                     </button>
                   );
                 })}
@@ -112,13 +166,73 @@ export function Navigation({ currentPage, onPageChange }: NavigationProps) {
                   onClick={() => handleItemClick('logout')}
                 >
                   <LogOut className="h-4 w-4" />
-                  Logout
+                  <span className="hidden md:inline">Logout</span>
                 </button>
               </nav>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Flow spacer to offset content on desktop */}
+      <div
+        aria-hidden
+        className="hidden lg:block"
+        style={{ width: collapsed ? '4rem' : '16rem', height: 0, transition: 'width 200ms ease' }}
+      />
+
+      {/* Persistent Desktop Sidebar (visible on lg and above) */}
+      <div className="hidden lg:block">
+        <div
+          className={`fixed left-0 bg-white shadow-lg z-40 ${collapsed ? 'w-16' : 'w-64'}`}
+          style={{
+            transition: 'width 200ms ease',
+            top: 'var(--header-height, 4rem)',
+            height: 'calc(100vh - var(--header-height, 4rem))'
+          }}
+        >
+          <div className={`p-4 ${collapsed ? 'px-2' : 'px-6'} pt-4 h-full flex flex-col`}> 
+            <div className="mb-3">
+              {!collapsed && <h2 className="text-lg font-semibold">Menu</h2>}
+            </div>
+            <nav className="space-y-1.5 mt-1 overflow-y-auto pr-1">
+              {menuItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = currentPage === item.id;
+
+                return (
+                  <button
+                    key={item.id}
+                    className={`
+                      w-full flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-3 py-2 rounded-md text-left transition-colors
+                      ${isActive
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'text-gray-700 hover:bg-gray-100'
+                      }
+                    `}
+                    title={collapsed ? item.label : undefined}
+                    onClick={() => handleItemClick(item.id)}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {!collapsed && <span className="truncate">{item.label}</span>}
+                  </button>
+                );
+              })}
+
+              <hr className="my-4" />
+
+              <button
+                className={`w-full flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-3 py-2 rounded-md text-left text-red-600 hover:bg-red-50 transition-colors`}
+                title={collapsed ? 'Logout' : undefined}
+                onClick={() => handleItemClick('logout')}
+              >
+                <LogOut className="h-4 w-4" />
+                {!collapsed && <span>Logout</span>}
+              </button>
+            </nav>
+          </div>
+        </div>
+      </div>
     </>
   );
 }

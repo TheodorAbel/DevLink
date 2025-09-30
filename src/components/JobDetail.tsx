@@ -22,6 +22,7 @@ import { AnimatedBackground } from './AnimatedBackground';
 import { toast } from 'sonner';
 
 import { ApplySheet } from './ApplySheet';
+import { CompanyProfileView } from './company/CompanyProfileView';
 
 interface JobDetailProps {
   onBack: () => void;
@@ -85,6 +86,8 @@ In this role, you'll work closely with our design and product teams to create ex
 export function JobDetail({ onBack, autoOpenApply = false }: JobDetailProps) {
   const [isApplied] = useState(false);
   const [applyOpen, setApplyOpen] = useState(autoOpenApply);
+  const [showCompanyProfile, setShowCompanyProfile] = useState(false);
+  const [companyData, setCompanyData] = useState<null | Parameters<typeof CompanyProfileView>[0]["company"]>(null);
   
   // In a real app, you would fetch job data based on jobId
   // For now, using mock data
@@ -93,6 +96,55 @@ export function JobDetail({ onBack, autoOpenApply = false }: JobDetailProps) {
   const handleApply = () => {
     // Open the responsive Apply sheet instead of instant-apply
     setApplyOpen(true);
+  };
+
+  const buildMockCompany = (): NonNullable<Parameters<typeof CompanyProfileView>[0]["company"]> => ({
+    id: jobDetail.companyId,
+    name: jobDetail.company,
+    logo: '',
+    coverImage: 'https://images.unsplash.com/photo-1496307042754-b4aa456c4a2d?q=80&w=1600&auto=format&fit=crop',
+    industry: 'Technology',
+    companySize: '51-200+',
+    location: jobDetail.location,
+    website: jobDetail.companyInfo.website,
+    founded: jobDetail.companyInfo.founded,
+    about: jobDetail.companyInfo.description,
+    tagline: 'Building products that empower people and businesses',
+    verified: true,
+    remotePolicy: 'Hybrid',
+    social: {
+      linkedin: 'https://linkedin.com/company/techcorp',
+      twitter: 'https://twitter.com/techcorp',
+      github: 'https://github.com/techcorp',
+      youtube: 'https://youtube.com/@techcorp'
+    },
+    culture: 'Inclusive, collaborative, and focused on impact.',
+    cultureItems: [
+      { title: 'Innovation', description: 'We encourage creative thinking and experimentation to drive breakthrough solutions.' },
+      { title: 'Collaboration', description: 'We believe in the power of teamwork and open communication across all levels.' },
+      { title: 'Diversity & Inclusion', description: 'We celebrate differences and believe diverse perspectives make us stronger.' },
+      { title: 'Work-Life Balance', description: 'We support our team in maintaining a healthy balance between work and personal life.' }
+    ],
+    media: [
+      { type: 'image', url: 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?q=80&w=1600&auto=format&fit=crop', title: 'Team' },
+      { type: 'video', url: 'https://sample-videos.com/video321/mp4/720/big_buck_bunny_720p_1mb.mp4', title: 'Intro' },
+      { type: 'image', url: 'https://images.unsplash.com/photo-1529333166437-7750a6dd5a70?q=80&w=1600&auto=format&fit=crop', title: 'Workspace' }
+    ],
+    leadership: [
+      { name: 'Jordan Lee', role: 'CEO' },
+      { name: 'Chris Morgan', role: 'CTO' }
+    ],
+    hiringProcess: ['Application Review', 'Technical Interview', 'Culture Fit', 'Offer'],
+    contact: { email: 'hello@techcorp.com', phone: '+1 (555) 987-6543', address: jobDetail.location },
+    openPositions: [
+      { id: jobDetail.id, title: jobDetail.title, type: jobDetail.type, location: jobDetail.location }
+    ]
+  });
+
+  const openCompany = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setCompanyData(buildMockCompany());
+    setShowCompanyProfile(true);
   };
 
   // Removed unused save/share/report handlers to satisfy ESLint
@@ -136,7 +188,10 @@ export function JobDetail({ onBack, autoOpenApply = false }: JobDetailProps) {
             <CardContent className="p-6 relative">
               <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
                 <div className="flex gap-4">
-                  <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-purple-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <div
+                    className="w-16 h-16 bg-gradient-to-br from-blue-100 to-purple-100 rounded-xl flex items-center justify-center flex-shrink-0 hover:ring-2 hover:ring-blue-200 cursor-pointer"
+                    onClick={openCompany}
+                  >
                     <Building2 className="h-8 w-8 text-blue-600" />
                   </div>
                   
@@ -144,7 +199,13 @@ export function JobDetail({ onBack, autoOpenApply = false }: JobDetailProps) {
                     <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-2">
                       {currentJob.title}
                     </h1>
-                    <p className="text-lg text-blue-600 font-medium mb-4">{currentJob.company}</p>
+                    <button
+                      type="button"
+                      onClick={openCompany}
+                      className="text-left text-lg text-blue-600 font-medium mb-4 hover:underline"
+                    >
+                      {currentJob.company}
+                    </button>
                     
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
                       <div className="flex items-center gap-2 text-muted-foreground">
@@ -254,6 +315,24 @@ export function JobDetail({ onBack, autoOpenApply = false }: JobDetailProps) {
             </Card>
           </motion.div>
 
+          {/* About Company (inline Company Profile Preview) */}
+          {showCompanyProfile && companyData && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+            >
+              <Card>
+                <CardHeader>
+                  <CardTitle>About {companyData.name}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4 overflow-x-hidden">
+                  <CompanyProfileView company={companyData} />
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+
           {/* Responsibilities */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -362,14 +441,14 @@ export function JobDetail({ onBack, autoOpenApply = false }: JobDetailProps) {
                 <h1 className="text-3xl font-bold tracking-tight">{currentJob.title}</h1>
                 <div className="flex items-center space-x-2">
                   <div className="group relative">
-                    <Link 
-                      href={`/company/${currentJob.companyId || '1'}`}
+                    <button
+                      type="button"
+                      onClick={openCompany}
                       className="text-muted-foreground hover:text-blue-600 hover:underline flex items-center"
-                      onClick={(e) => e.stopPropagation()}
                     >
                       {currentJob.company}
                       <ExternalLink className="ml-1 h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </Link>
+                    </button>
                   </div>
                   <span className="text-muted-foreground">•</span>
                   <span className="text-muted-foreground">{currentJob.location}</span>

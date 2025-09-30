@@ -39,6 +39,10 @@ interface JobFormData {
   description: string;
   skills: string[];
   screeningQuestions: ScreeningQuestion[];
+  applicationMethod: 'platform' | 'website' | 'email';
+  applicationUrl?: string;
+  applicationEmail?: string;
+  requirements: string[];
 }
 
 interface PostJobFormProps {
@@ -69,10 +73,15 @@ export function PostJobForm({
     description: '',
     skills: [],
     screeningQuestions: [],
+    applicationMethod: 'platform',
+    applicationUrl: '',
+    applicationEmail: '',
+    requirements: [],
     ...initialData
   });
 
   const [newSkill, setNewSkill] = useState('');
+  const [newRequirement, setNewRequirement] = useState('');
   const [currentQuestion, setCurrentQuestion] = useState<ScreeningQuestion>({
     id: '',
     text: '',
@@ -97,6 +106,23 @@ export function PostJobForm({
     setFormData(prev => ({
       ...prev,
       skills: prev.skills.filter(skill => skill !== skillToRemove)
+    }));
+  };
+
+  const handleAddRequirement = () => {
+    if (newRequirement.trim() && !formData.requirements.includes(newRequirement.trim())) {
+      setFormData(prev => ({
+        ...prev,
+        requirements: [...prev.requirements, newRequirement.trim()]
+      }));
+      setNewRequirement('');
+    }
+  };
+
+  const handleRemoveRequirement = (reqToRemove: string) => {
+    setFormData(prev => ({
+      ...prev,
+      requirements: prev.requirements.filter(r => r !== reqToRemove)
     }));
   };
 
@@ -160,6 +186,23 @@ export function PostJobForm({
     if (!formData.title || !formData.description || !formData.jobType) {
       toast.error("Please fill in all required fields");
       return;
+    }
+    // Validate application method specifics
+    if (formData.applicationMethod === 'website') {
+      const url = (formData.applicationUrl || '').trim();
+      const isValidUrl = /^https?:\/\//i.test(url);
+      if (!url || !isValidUrl) {
+        toast.error("Please provide a valid application URL starting with http or https");
+        return;
+      }
+    }
+    if (formData.applicationMethod === 'email') {
+      const email = (formData.applicationEmail || '').trim();
+      const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+      if (!email || !isValidEmail) {
+        toast.error("Please provide a valid application email address");
+        return;
+      }
     }
     onPublish(formData);
     toast.success("Job published successfully!");
@@ -413,7 +456,7 @@ export function PostJobForm({
 
       <Card>
         <CardHeader>
-          <CardTitle>Skills & Requirements</CardTitle>
+          <CardTitle>Skills</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -443,6 +486,100 @@ export function PostJobForm({
                 </Badge>
               ))}
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Requirements</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Job Requirements</Label>
+            <div className="flex gap-2">
+              <Input
+                value={newRequirement}
+                onChange={(e) => setNewRequirement(e.target.value)}
+                placeholder="Add a requirement..."
+                onKeyPress={(e) => e.key === 'Enter' && handleAddRequirement()}
+              />
+              <Button type="button" onClick={handleAddRequirement}>
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="flex flex-wrap gap-2 mt-2">
+              {formData.requirements.map((req) => (
+                <Badge key={req} variant="secondary" className="gap-1">
+                  {req}
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveRequirement(req)}
+                    className="ml-1 hover:text-destructive"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Application Method</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="applicationMethod">How should candidates apply?</Label>
+              <Select
+                value={formData.applicationMethod}
+                onValueChange={(value: 'platform' | 'website' | 'email') =>
+                  setFormData(prev => ({
+                    ...prev,
+                    applicationMethod: value,
+                    applicationUrl: value === 'website' ? prev.applicationUrl || '' : '',
+                    applicationEmail: value === 'email' ? prev.applicationEmail || '' : '',
+                  }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select application method" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="platform">Through this platform</SelectItem>
+                  <SelectItem value="website">Company website</SelectItem>
+                  <SelectItem value="email">By email</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {formData.applicationMethod === 'website' && (
+              <div className="space-y-2">
+                <Label htmlFor="applicationUrl">Application URL *</Label>
+                <Input
+                  id="applicationUrl"
+                  value={formData.applicationUrl || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, applicationUrl: e.target.value }))}
+                  placeholder="https://company.com/careers/apply"
+                />
+              </div>
+            )}
+
+            {formData.applicationMethod === 'email' && (
+              <div className="space-y-2">
+                <Label htmlFor="applicationEmail">Application Email *</Label>
+                <Input
+                  id="applicationEmail"
+                  type="email"
+                  value={formData.applicationEmail || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, applicationEmail: e.target.value }))}
+                  placeholder="jobs@company.com"
+                />
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

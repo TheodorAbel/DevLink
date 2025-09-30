@@ -28,6 +28,7 @@ import {
 } from './ui/select';
 import { Job } from './JobCard';
 import { toast } from 'sonner';
+import { ApplicantCompanyProfileDrawer } from './ApplicantCompanyProfileDrawer';
 
 // Mock saved jobs data
 const savedJobsData: Job[] = [
@@ -110,6 +111,8 @@ export function SavedJobs({ onJobSelect }: SavedJobsProps) {
   const [sortBy, setSortBy] = useState('newest');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [selectedJobs, setSelectedJobs] = useState<string[]>([]);
+  const [companyOpen, setCompanyOpen] = useState(false);
+  const [companyData, setCompanyData] = useState<null | Parameters<typeof ApplicantCompanyProfileDrawer>[0]["company"]>(null);
   
   // State for job detail view
   const [showJobDetail, setShowJobDetail] = useState(false);
@@ -202,6 +205,55 @@ export function SavedJobs({ onJobSelect }: SavedJobsProps) {
     setAutoOpenApply(false);
   };
 
+  const buildMockCompany = (job: Job): NonNullable<Parameters<typeof ApplicantCompanyProfileDrawer>[0]["company"]> => ({
+    id: job.id,
+    name: job.company,
+    logo: '',
+    coverImage: 'https://images.unsplash.com/photo-1496307042754-b4aa456c4a2d?q=80&w=1600&auto=format&fit=crop',
+    industry: 'Technology',
+    companySize: '51-200+',
+    location: job.location,
+    website: 'https://example.com',
+    founded: '2018',
+    about: `${job.company} is a leading technology company focused on building innovative SaaS products that deliver real business value.`,
+    tagline: 'Building products that empower people and businesses',
+    verified: true,
+    remotePolicy: 'Hybrid',
+    social: {
+      linkedin: 'https://linkedin.com/company/example',
+      twitter: 'https://twitter.com/example',
+      github: 'https://github.com/example',
+      youtube: 'https://youtube.com/@example'
+    },
+    culture: 'We value collaboration, continuous learning, and customer obsession.',
+    cultureItems: [
+      { title: 'Innovation', description: 'We encourage creative thinking and experimentation to drive breakthrough solutions.' },
+      { title: 'Collaboration', description: 'We believe in the power of teamwork and open communication across all levels.' },
+      { title: 'Diversity & Inclusion', description: 'We celebrate differences and believe diverse perspectives make us stronger.' },
+      { title: 'Work-Life Balance', description: 'We support our team in maintaining a healthy balance between work and personal life.' }
+    ],
+    media: [
+      { type: 'image', url: 'https://images.unsplash.com/photo-1556761175-4b46a572b786?q=80&w=1200&auto=format&fit=crop', title: 'Office' },
+      { type: 'video', url: 'https://sample-videos.com/video321/mp4/720/big_buck_bunny_720p_1mb.mp4', title: 'Overview' },
+      { type: 'image', url: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?q=80&w=1200&auto=format&fit=crop', title: 'Team' }
+    ],
+    leadership: [
+      { name: 'Alex Johnson', role: 'CEO' },
+      { name: 'Taylor Smith', role: 'CTO' },
+    ],
+    hiringProcess: ['Application Review', 'Initial Screening', 'Technical Assessment', 'Team Interview', 'Final Interview'],
+    contact: { email: 'contact@example.com', phone: '+1 (555) 123-4567', address: job.location },
+    openPositions: [
+      { id: job.id, title: job.title, type: job.type, location: job.location },
+    ],
+  });
+
+  const openCompany = (e: React.MouseEvent, job: Job) => {
+    e.stopPropagation();
+    setCompanyData(buildMockCompany(job));
+    setCompanyOpen(true);
+  };
+
   const renderJobCard = (job: Job, index: number) => {
     const isSelected = selectedJobs.includes(job.id);
     
@@ -262,7 +314,13 @@ export function SavedJobs({ onJobSelect }: SavedJobsProps) {
                     <h3 className="font-semibold text-lg group-hover:text-blue-600 transition-colors">
                       {job.title}
                     </h3>
-                    <p className="text-muted-foreground">{job.company}</p>
+                    <button
+                      type="button"
+                      onClick={(e) => openCompany(e, job)}
+                      className="text-muted-foreground hover:text-blue-600 hover:underline"
+                    >
+                      {job.company}
+                    </button>
                   </div>
                 </div>
 
@@ -351,6 +409,7 @@ export function SavedJobs({ onJobSelect }: SavedJobsProps) {
   }
 
   return (
+    <>
     <div className="min-h-screen relative">
       <AnimatedBackground variant="gradient" />
       
@@ -541,5 +600,7 @@ export function SavedJobs({ onJobSelect }: SavedJobsProps) {
         )}
       </div>
     </div>
+    <ApplicantCompanyProfileDrawer open={companyOpen} onOpenChange={setCompanyOpen} company={companyData} />
+    </>
   );
 }

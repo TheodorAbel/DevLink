@@ -1,9 +1,8 @@
-import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
 import { ThemeProvider } from "@/lib/theme-context";
-import { Header } from "@/components/Header";
+import { ConditionalHeader } from "@/components/ConditionalHeader";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,7 +14,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
+export const metadata = {
   title: "Job Marketplace",
   description: "Find your dream job",
 };
@@ -31,7 +30,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <ThemeProvider>
-          <Header />
+          <ConditionalHeader />
           {children}
           <Toaster position="top-center" reverseOrder={false} />
         </ThemeProvider>

@@ -81,7 +81,8 @@ export default function VerifyEmailPage() {
             router.push("/seeker");
             break;
           case ROLES.EMPLOYER:
-            router.push("/employer/dashboard");
+            // Redirect to 3-step company profile signup
+            router.push("/employer-signup");
             break;
           case ROLES.ADMIN:
             router.push("/admin/dashboard");

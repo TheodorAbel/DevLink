@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
+
 import { motion } from 'framer-motion';
 import Link from 'next/link';
+
 import { Card, CardHeader, CardTitle, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -15,6 +17,7 @@ import {
   Calendar,
   ExternalLink
 } from 'lucide-react';
+import { ApplicantCompanyProfileDrawer } from './ApplicantCompanyProfileDrawer';
 
 export interface Job {
   id: string;
@@ -52,6 +55,41 @@ export function JobCard({
   isSaved = false,
   className = ''
 }: JobCardProps) {
+  const [companyOpen, setCompanyOpen] = useState(false);
+  const [companyData, setCompanyData] = useState<null | Parameters<typeof ApplicantCompanyProfileDrawer>[0]["company"]>(null);
+
+  const buildMockCompany = (): NonNullable<Parameters<typeof ApplicantCompanyProfileDrawer>[0]["company"]> => ({
+    id: job.companyId ?? '1',
+    name: job.company,
+    logo: job.logo || '',
+    coverImage: '',
+    industry: 'Technology',
+    companySize: '200-500 employees',
+    location: job.location,
+    website: 'https://example.com',
+    founded: '2018',
+    about: `${job.company} is a leading organization focused on innovation and delivering high-quality products and services to customers worldwide.`,
+    culture: 'We value collaboration, continuous learning, and customer obsession.',
+    media: [
+      { type: 'image', url: 'https://images.unsplash.com/photo-1556761175-4b46a572b786?q=80&w=1200&auto=format&fit=crop', title: 'Office' },
+      { type: 'image', url: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?q=80&w=1200&auto=format&fit=crop', title: 'Team' },
+    ],
+    leadership: [
+      { name: 'Alex Johnson', role: 'CEO' },
+      { name: 'Taylor Smith', role: 'CTO' },
+    ],
+    hiringProcess: ['Application Review', 'Technical Interview', 'Final Interview', 'Offer'],
+    contact: { email: 'contact@example.com', phone: '+1 (555) 123-4567', address: job.location },
+    openPositions: [
+      { id: job.id, title: job.title, type: job.type, location: job.location },
+    ],
+  });
+
+  const openCompany = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setCompanyData(buildMockCompany());
+    setCompanyOpen(true);
+  };
   const handleCardClick = () => {
     onView?.(job.id);
   };
@@ -79,7 +117,13 @@ export function JobCard({
             <div className="flex items-start justify-between mb-2">
               <div>
                 <h4 className="font-medium line-clamp-1">{job.title}</h4>
-                <p className="text-sm text-muted-foreground">{job.company}</p>
+                <button
+                  type="button"
+                  onClick={(e) => openCompany(e)}
+                  className="text-left text-sm text-muted-foreground hover:text-blue-600 hover:underline"
+                >
+                  {job.company}
+                </button>
               </div>
               <div className="flex gap-2">
                 <Button
@@ -135,7 +179,7 @@ export function JobCard({
             animate={{ x: 0 }}
             className="absolute top-0 right-0 bg-gradient-to-r from-yellow-400 to-orange-400 text-white text-xs px-3 py-1 rounded-bl-lg shadow-lg"
           >
-            ⭐ Featured
+            Featured
           </motion.div>
         )}
         
@@ -149,11 +193,17 @@ export function JobCard({
           <div className="flex items-start justify-between">
             <div className="flex items-start gap-3 flex-1">
               {job.logo ? (
-                <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                <div
+                  className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center hover:ring-2 hover:ring-blue-200 cursor-pointer"
+                  onClick={openCompany}
+                >
                   <Building2 className="h-6 w-6 text-gray-400" />
                 </div>
               ) : (
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-purple-100 rounded-lg flex items-center justify-center">
+                <div
+                  className="w-12 h-12 bg-gradient-to-br from-blue-100 to-purple-100 rounded-lg flex items-center justify-center hover:ring-2 hover:ring-blue-200 cursor-pointer"
+                  onClick={openCompany}
+                >
                   <Building2 className="h-6 w-6 text-blue-600" />
                 </div>
               )}
@@ -164,16 +214,14 @@ export function JobCard({
                 </CardTitle>
                 <div className="flex items-center space-x-2 group">
                   <Building2 className="h-4 w-4 text-gray-500 flex-shrink-0" />
-                  <div className="relative" onClick={(e) => e.stopPropagation()}>
-                    <Link 
-                      href={`/company/${job.companyId || '1'}`} 
-                      className="text-sm text-gray-600 hover:text-blue-600 hover:underline flex items-center"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {job.company}
-                      <ExternalLink className="ml-1 h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
-                    </Link>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={openCompany}
+                    className="text-left text-sm text-gray-600 hover:text-blue-600 hover:underline flex items-center"
+                  >
+                    {job.company}
+                    <ExternalLink className="ml-1 h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                  </button>
                 </div>
                 
                 <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
@@ -239,13 +287,13 @@ export function JobCard({
             )}
           </div>
           
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-0">
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Clock className="h-3 w-3" />
               Posted {job.postedDate}
             </div>
             
-            <div className="flex gap-2">
+            <div className="flex flex-col md:flex-row gap-2 md:gap-2 w-full md:w-auto">
               <Button
                 variant="outline"
                 size="sm"
@@ -253,7 +301,7 @@ export function JobCard({
                   e.stopPropagation();
                   onView?.(job.id);
                 }}
-                className="hover:bg-blue-50 hover:border-blue-200"
+                className="hover:bg-blue-50 hover:border-blue-200 w-full md:w-auto min-h-11"
               >
                 <Eye className="h-4 w-4 mr-1" />
                 View
@@ -264,7 +312,7 @@ export function JobCard({
                   e.stopPropagation();
                   onApply?.(job.id);
                 }}
-                className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
+                className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 w-full md:w-auto min-h-11"
               >
                 Apply Now
               </Button>
@@ -272,6 +320,7 @@ export function JobCard({
           </div>
         </CardContent>
       </Card>
+      <ApplicantCompanyProfileDrawer open={companyOpen} onOpenChange={setCompanyOpen} company={companyData} />
     </motion.div>
   );
 }

@@ -22,6 +22,8 @@ import {
   Building2,
   GraduationCap,
   Star,
+  Globe,
+  Linkedin,
 } from 'lucide-react';
 import { AnimatedBackground } from './AnimatedBackground';
 import { Separator } from './ui/separator';
@@ -962,6 +964,33 @@ function ProfilePreview({ profile }: { profile: {
             {profile.personalInfo.email}
           </span>
         </div>
+
+        {(profile.personalInfo.website || profile.personalInfo.linkedin) && (
+          <div className="mt-4 flex items-center justify-center gap-3 flex-wrap">
+            {profile.personalInfo.website && (
+              <a
+                href={profile.personalInfo.website}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-blue-50 to-purple-50 text-blue-700 border border-blue-200 hover:from-blue-100 hover:to-purple-100 transition shadow-sm"
+              >
+                <Globe className="h-4 w-4" />
+                <span className="font-medium">Website</span>
+              </a>
+            )}
+            {profile.personalInfo.linkedin && (
+              <a
+                href={profile.personalInfo.linkedin}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-blue-50 to-purple-50 text-blue-700 border border-blue-200 hover:from-blue-100 hover:to-purple-100 transition shadow-sm"
+              >
+                <Linkedin className="h-4 w-4" />
+                <span className="font-medium">LinkedIn</span>
+              </a>
+            )}
+          </div>
+        )}
       </div>
 
       <div>

@@ -98,7 +98,10 @@ function SeekerPageInner() {
 
   return (
     <RoleGuard allowedRole="seeker">
-      <div className="min-h-screen bg-background">
+      <div
+        className="min-h-screen bg-background"
+        style={{ paddingLeft: 'var(--seeker-sidebar-width, 0px)', transition: 'padding-left 200ms ease' }}
+      >
         <Navigation currentPage={currentPage} onPageChange={handlePageChange} />
         <main className="w-full">
           {renderCurrentPage()}
