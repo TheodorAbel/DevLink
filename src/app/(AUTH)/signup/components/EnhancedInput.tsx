@@ -26,10 +26,11 @@ export function EnhancedInput({
   const [isFocused, setIsFocused] = useState(false);
   const [hasBeenTouched, setHasBeenTouched] = useState(false);
   
-  const hasValue = value.length > 0;
+  const safeValue = value ?? '';
+  const hasValue = safeValue.length > 0;
   const isFloating = isFocused || hasValue;
   
-  const validationResult = validation && hasBeenTouched ? validation(value) : null;
+  const validationResult = validation && hasBeenTouched ? validation(safeValue) : null;
   const showValidation = hasBeenTouched && hasValue;
   const isValid = !validation || validationResult?.isValid !== false;
   
@@ -43,8 +44,8 @@ export function EnhancedInput({
       <div className="relative">
         <input
           type={type}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
+          value={safeValue}
+          onChange={(e) => onChange(e.target.value ?? '')}
           onFocus={() => setIsFocused(true)}
           onBlur={handleBlur}
           placeholder={isFloating ? placeholder : ''}

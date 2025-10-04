@@ -7,7 +7,11 @@ import { signUp } from "@/lib/auth";
 import { ROLES, Role } from "@/lib/roles";
 import toast from "react-hot-toast";
 import { User, Mail, Lock, ArrowRight, Sparkles, ShieldCheck } from "lucide-react";
-import { SaaSBackground } from "@/components/auth/SaaSBackground";
+import dynamic from "next/dynamic";
+const SaaSBackground = dynamic(
+  () => import("@/components/auth/SaaSBackground").then(m => m.SaaSBackground),
+  { ssr: false }
+);
 import { SaaSInput } from "@/components/auth/SaaSInput";
 import { RoleSelector, roleOptions } from "@/components/auth/RoleSelector";
 import Link from "next/link";

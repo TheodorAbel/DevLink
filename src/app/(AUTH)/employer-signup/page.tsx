@@ -10,6 +10,7 @@ import { Step3AboutCompany } from '../signup/components/Step3AboutCompany';
 import { ExtravagantWaitingPage } from '../signup/components/ExtravagantWaitingPage';
 import { ProgressBar } from '../signup/components/ProgressBar';
 import toast from 'react-hot-toast';
+import { supabase } from '@/lib/supabaseClient';
 
 type Step1Data = {
   companyName: string;
@@ -19,28 +20,24 @@ type Step1Data = {
   companySize: string;
 };
 
+// Align with Step2BusinessLegitimacy props
 type Step2Data = {
-  registrationNumber: string;
-  taxId: string;
-  registrationDocument: File | null;
+  tinNumber: string;
+  licenseNumber: string;
   businessLicense: File | null;
-  country: string;
-  city: string;
-  address: string;
+  region: string;
+  cityAddress: string;
+  specificAddress: string;
+  phoneNumber: string;
 };
 
+// Align with ../signup/components/Step3AboutCompany
 type Step3Data = {
   description: string;
-  foundedYear: string;
-  headquarters: string;
-  specialties: string[];
-  benefits: string[];
-  culture: string;
-  socialLinks: {
-    linkedin: string;
-    twitter: string;
-    facebook: string;
-  };
+  yearFounded: string;
+  linkedinUrl: string;
+  facebookUrl: string;
+  departments: string[];
 };
 
 export default function EmployerSignupPage() {
@@ -58,27 +55,21 @@ export default function EmployerSignupPage() {
   });
 
   const [step2Data, setStep2Data] = useState<Step2Data>({
-    registrationNumber: '',
-    taxId: '',
-    registrationDocument: null,
+    tinNumber: '',
+    licenseNumber: '',
     businessLicense: null,
-    country: '',
-    city: '',
-    address: '',
+    region: '',
+    cityAddress: '',
+    specificAddress: '',
+    phoneNumber: '',
   });
 
   const [step3Data, setStep3Data] = useState<Step3Data>({
     description: '',
-    foundedYear: '',
-    headquarters: '',
-    specialties: [],
-    benefits: [],
-    culture: '',
-    socialLinks: {
-      linkedin: '',
-      twitter: '',
-      facebook: '',
-    },
+    yearFounded: '',
+    linkedinUrl: '',
+    facebookUrl: '',
+    departments: [],
   });
 
   const totalSteps = 3;
@@ -100,16 +91,32 @@ export default function EmployerSignupPage() {
   };
 
   const validateStep2 = () => {
-    if (!step2Data.registrationNumber.trim()) {
-      toast.error('Registration number is required');
+    if (!step2Data.licenseNumber.trim()) {
+      toast.error('License number is required');
       return false;
     }
-    if (!step2Data.country.trim()) {
-      toast.error('Country is required');
+    if (!step2Data.tinNumber.trim()) {
+      toast.error('TIN number is required');
       return false;
     }
-    if (!step2Data.city.trim()) {
-      toast.error('City is required');
+    if (!step2Data.businessLicense) {
+      toast.error('Business license document is required');
+      return false;
+    }
+    if (!step2Data.region.trim()) {
+      toast.error('Region is required');
+      return false;
+    }
+    if (!step2Data.cityAddress.trim()) {
+      toast.error('City / Sub-city / Woreda is required');
+      return false;
+    }
+    if (!step2Data.specificAddress.trim()) {
+      toast.error('Specific address / landmark is required');
+      return false;
+    }
+    if (!step2Data.phoneNumber.trim()) {
+      toast.error('Phone number is required');
       return false;
     }
     return true;
@@ -120,8 +127,20 @@ export default function EmployerSignupPage() {
       toast.error('Company description is required');
       return false;
     }
-    if (step3Data.description.trim().length < 50) {
-      toast.error('Description must be at least 50 characters');
+    if (step3Data.description.trim().length < 300) {
+      toast.error('Description must be at least 300 characters');
+      return false;
+    }
+    if (!step3Data.yearFounded) {
+      toast.error('Year founded is required');
+      return false;
+    }
+    if (!step3Data.linkedinUrl.trim()) {
+      toast.error('LinkedIn company URL is required');
+      return false;
+    }
+    if (step3Data.departments.length === 0) {
+      toast.error('Select at least one hiring department');
       return false;
     }
     return true;
@@ -161,50 +180,86 @@ export default function EmployerSignupPage() {
     if (!validateStep3()) return;
 
     setIsLoading(true);
-    
     try {
-      // TODO: Send data to your backend/Supabase
-      const formData = new FormData();
-      
-      // Step 1 data
-      formData.append('companyName', step1Data.companyName);
-      formData.append('website', step1Data.website);
-      formData.append('industry', step1Data.industry);
-      formData.append('companySize', step1Data.companySize);
-      if (step1Data.logo) formData.append('logo', step1Data.logo);
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) {
+        toast.error('You must be logged in to submit');
+        return;
+      }
 
-      // Step 2 data
-      formData.append('registrationNumber', step2Data.registrationNumber);
-      formData.append('taxId', step2Data.taxId);
-      formData.append('country', step2Data.country);
-      formData.append('city', step2Data.city);
-      formData.append('address', step2Data.address);
-      if (step2Data.registrationDocument) formData.append('registrationDocument', step2Data.registrationDocument);
-      if (step2Data.businessLicense) formData.append('businessLicense', step2Data.businessLicense);
+      // Map wizard data -> API payload
+      const payload: any = {
+        company_name: step1Data.companyName,
+        website_url: step1Data.website || null,
+        industry: step1Data.industry,
+        company_size: step1Data.companySize,
+        founded_year: step3Data.yearFounded ? Number(step3Data.yearFounded) || null : null,
+        registration_number: step2Data.licenseNumber || null,
+        tax_id: step2Data.tinNumber || null,
+        // Location: using Ethiopia-specific fields from step 2
+        country: 'Ethiopia',
+        city: step2Data.cityAddress || '',
+        address: step2Data.specificAddress || null,
+        contact_phone: step2Data.phoneNumber || null,
+        description: step3Data.description,
+        linkedin_url: step3Data.linkedinUrl || null,
+        facebook_url: step3Data.facebookUrl || null,
+        // Defaults for display toggles
+        show_employees: true,
+        show_culture: true,
+        show_media: true,
+        show_leadership: true,
+        show_hiring: true,
+        show_contacts: true,
+        show_socials: true,
+      };
 
-      // Step 3 data
-      formData.append('description', step3Data.description);
-      formData.append('foundedYear', step3Data.foundedYear);
-      formData.append('headquarters', step3Data.headquarters);
-      formData.append('specialties', JSON.stringify(step3Data.specialties));
-      formData.append('benefits', JSON.stringify(step3Data.benefits));
-      formData.append('culture', step3Data.culture);
-      formData.append('socialLinks', JSON.stringify(step3Data.socialLinks));
+      const res = await fetch('/api/company/profile', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
 
-      // TODO: Replace with your actual API endpoint
-      // const response = await fetch('/api/employer-profile', {
-      //   method: 'POST',
-      //   body: formData,
-      // });
+      const out = await res.json().catch(() => ({}));
+      // eslint-disable-next-line no-console
+      console.log('Employer signup save response:', res.status, out);
+      if (!res.ok) {
+        if (res.status === 409) {
+          toast.error(out?.details || 'Company name already exists. Please choose a different name.');
+          setCurrentStep(1);
+          return;
+        }
+        toast.error(out?.details || out?.error || 'Failed to save company');
+        return;
+      }
 
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Ensure the user role is employer before redirecting
+      try {
+        const userId = (session as any)?.user?.id;
+        if (userId) {
+          const { error: roleErr } = await supabase
+            .from('users')
+            .update({ role: 'employer' })
+            .eq('id', userId);
+          if (roleErr) {
+            // eslint-disable-next-line no-console
+            console.error('Failed to set employer role:', roleErr);
+          }
+        }
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.error('Unexpected error setting employer role:', e);
+      }
 
-      toast.success('Application submitted successfully!');
-      setIsSubmitted(true);
-    } catch (error) {
-      console.error('Error submitting application:', error);
-      toast.error('Failed to submit application. Please try again.');
+      toast.success('Company profile saved. Redirecting to dashboard...');
+      router.push('/employer');
+    } catch (e: any) {
+      console.error('Error submitting application:', e);
+      toast.error(e?.message || 'Failed to submit application. Please try again.');
     } finally {
       setIsLoading(false);
     }

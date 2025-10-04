@@ -37,7 +37,36 @@ export default function RoleGuard({ allowedRole, children }: RoleGuardProps) {
         .eq("id", user.id)
         .single();
 
-      if (error || !profile || profile.role !== allowedRole) {
+      if (error) {
+        // eslint-disable-next-line no-console
+        console.error("RoleGuard users select error:", error);
+      }
+      // eslint-disable-next-line no-console
+      console.log("RoleGuard DB role:", profile?.role, "allowed:", allowedRole);
+      // eslint-disable-next-line no-console
+      console.log("RoleGuard metadata role:", user.user_metadata?.role);
+
+      let dbRole = (profile?.role as string | undefined)?.toLowerCase();
+      const metaRole = (user.user_metadata?.role as string | undefined)?.toLowerCase();
+
+      // If no DB role or select failed, attempt to upsert from metadata (first login path)
+      if (!dbRole) {
+        const fallbackRole = metaRole ?? 'seeker';
+        // eslint-disable-next-line no-console
+        console.log('RoleGuard: resolving role via metadata and upsert:', fallbackRole);
+        const { error: upsertErr } = await supabase
+          .from('users')
+          .upsert({ id: user.id, role: fallbackRole, email: user.email, name: user.user_metadata?.name ?? 'User' }, { onConflict: 'id' });
+        if (upsertErr) {
+          // eslint-disable-next-line no-console
+          console.error('RoleGuard upsert error:', upsertErr);
+        } else {
+          dbRole = fallbackRole;
+        }
+      }
+
+      const effectiveRole = (dbRole ?? metaRole ?? null) as string | null;
+      if (!effectiveRole || effectiveRole !== allowedRole.toLowerCase()) {
         setAuthorized(false);
         setLoading(false);
         router.push("/403");

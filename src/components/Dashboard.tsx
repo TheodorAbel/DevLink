@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ProfileProgress } from './ProfileProgress';
 import { JobCard, Job } from './JobCard';
@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 
 import { AnimatedBackground } from './AnimatedBackground';
+import { fetchProfileStepsStatus } from '@/lib/seekerProfile';
 
 // Mock data
 const recentJobs: Job[] = [
@@ -107,6 +108,21 @@ interface DashboardProps {
 }
 
 export function Dashboard({ onPageChange }: DashboardProps) {
+  const [steps, setSteps] = useState<{ basic: boolean; experience: boolean; resume: boolean; contact: boolean }>({ basic: false, experience: false, resume: false, contact: false });
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const status = await fetchProfileStepsStatus();
+        if (!mounted) return;
+        setSteps(status);
+      } catch (e) {
+        console.error('Failed to load profile steps status', e);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'interview': return 'bg-blue-100 text-blue-700 border-blue-200';
@@ -296,7 +312,12 @@ export function Dashboard({ onPageChange }: DashboardProps) {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2 }}
             >
-              <ProfileProgress onStepClick={handleProfileStepClick} />
+              <ProfileProgress onStepClick={handleProfileStepClick} completedOverride={{
+                basic: steps.basic,
+                experience: steps.experience,
+                resume: steps.resume,
+                contact: steps.contact,
+              }} />
             </motion.div>
 
             {/* Notifications Widget */}

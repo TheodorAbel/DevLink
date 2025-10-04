@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardHeader, CardTitle, CardContent } from './ui/card';
 import { Button } from './ui/button';
@@ -31,6 +31,7 @@ import { Avatar, AvatarFallback } from './ui/avatar';
 import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 // Note: Select components are not used in this file
+import { fetchSeekerProfile, saveSeekerProfile, uploadSeekerResume, fetchPrimaryResume, createResumeSignedUrl, fetchProfileCompletion } from '@/lib/seekerProfile';
 
 interface ProfileEditProps {
   onBack?: () => void;
@@ -111,12 +112,14 @@ const initialProfile = {
 export function ProfileEdit({ onBack: _onBack, initialTab = 'personal' }: ProfileEditProps) {
   void _onBack;
   const [profile, setProfile] = useState(initialProfile);
+  const [loading, setLoading] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [showResumeBuilder, setShowResumeBuilder] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [newSkill, setNewSkill] = useState('');
   const [editingExperience, setEditingExperience] = useState<string | null>(null);
   const [editingEducation, setEditingEducation] = useState<string | null>(null);
+  const [completion, setCompletion] = useState<{ percentage: number; missing: string[] }>({ percentage: 0, missing: [] });
   void showResumeBuilder;
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -129,7 +132,7 @@ export function ProfileEdit({ onBack: _onBack, initialTab = 'personal' }: Profil
     setIsDragOver(false);
   }, []);
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
+  const handleDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
     
@@ -137,35 +140,48 @@ export function ProfileEdit({ onBack: _onBack, initialTab = 'personal' }: Profil
     const pdfFiles = files.filter(file => file.type === 'application/pdf');
     
     if (pdfFiles.length > 0) {
-      const file = pdfFiles[0];
-      setProfile(prev => ({
-        ...prev,
-        resume: {
-          fileName: file.name,
-          uploadDate: new Date().toISOString().split('T')[0],
-          size: `${Math.round(file.size / 1024)} KB`
-        }
-      }));
-      toast.success('Resume uploaded successfully!');
+      try {
+        const file = pdfFiles[0];
+        const meta = await uploadSeekerResume(file);
+        setProfile(prev => ({
+          ...prev,
+          resume: {
+            fileName: meta.fileName,
+            uploadDate: meta.uploadDate,
+            size: `${meta.sizeKB} KB`
+          }
+        }));
+        toast.success('Resume uploaded successfully!');
+      } catch (err) {
+        console.error(err);
+        toast.error('Failed to upload resume');
+      }
     } else {
       toast.error('Please upload a PDF file');
     }
   }, []);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file && file.type === 'application/pdf') {
+    if (!file) return;
+    if (file.type !== 'application/pdf') {
+      toast.error('Please upload a PDF file');
+      return;
+    }
+    try {
+      const meta = await uploadSeekerResume(file);
       setProfile(prev => ({
         ...prev,
         resume: {
-          fileName: file.name,
-          uploadDate: new Date().toISOString().split('T')[0],
-          size: `${Math.round(file.size / 1024)} KB`
+          fileName: meta.fileName,
+          uploadDate: meta.uploadDate,
+          size: `${meta.sizeKB} KB`
         }
       }));
       toast.success('Resume uploaded successfully!');
-    } else {
-      toast.error('Please upload a PDF file');
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to upload resume');
     }
   };
 
@@ -260,8 +276,122 @@ export function ProfileEdit({ onBack: _onBack, initialTab = 'personal' }: Profil
     toast.success('Education removed!');
   };
 
-  const handleSaveProfile = () => {
-    toast.success('Profile saved successfully!');
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        setLoading(true);
+        const data = await fetchSeekerProfile();
+        if (!mounted) return;
+        setProfile({
+          personalInfo: {
+            firstName: data.personalInfo.firstName,
+            lastName: data.personalInfo.lastName,
+            email: data.personalInfo.email,
+            phone: data.personalInfo.phone,
+            location: data.personalInfo.location,
+            bio: data.personalInfo.bio,
+            website: data.personalInfo.website,
+            linkedin: data.personalInfo.linkedin,
+          },
+          skills: data.skills,
+          experience: data.experience,
+          education: data.education,
+          resume: initialProfile.resume,
+        });
+        // Also fetch primary resume metadata, if any
+        const primary = await fetchPrimaryResume();
+        if (mounted && primary) {
+          setProfile(prev => ({
+            ...prev,
+            resume: {
+              fileName: primary.file_name,
+              uploadDate: primary.uploaded_at ? primary.uploaded_at.split('T')[0] : prev.resume.uploadDate,
+              size: primary.file_size ? `${Math.round(primary.file_size / 1024)} KB` : prev.resume.size,
+            },
+          }));
+        }
+        // Fetch profile completion status
+        const comp = await fetchProfileCompletion();
+        if (mounted) setCompletion(comp);
+      } catch (e) {
+        console.error(e);
+        toast.error('Failed to load profile');
+      } finally {
+        setLoading(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const handleViewResume = async () => {
+    try {
+      const primary = await fetchPrimaryResume();
+      if (!primary) {
+        toast.error('No resume found');
+        return;
+      }
+      const url = await createResumeSignedUrl(primary.file_url, 60);
+      window.open(url, '_blank');
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to open resume');
+    }
+  };
+
+  const handleDownloadResume = async () => {
+    try {
+      const primary = await fetchPrimaryResume();
+      if (!primary) {
+        toast.error('No resume found');
+        return;
+      }
+      const url = await createResumeSignedUrl(primary.file_url, 60);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = profile.resume.fileName || 'resume.pdf';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to download resume');
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    try {
+      setLoading(true);
+      await saveSeekerProfile({
+        personalInfo: {
+          firstName: profile.personalInfo.firstName,
+          lastName: profile.personalInfo.lastName,
+          email: profile.personalInfo.email,
+          phone: profile.personalInfo.phone,
+          location: profile.personalInfo.location,
+          bio: profile.personalInfo.bio,
+          website: profile.personalInfo.website,
+          linkedin: profile.personalInfo.linkedin,
+        },
+        skills: profile.skills,
+        experience: profile.experience,
+        education: profile.education,
+      });
+      toast.success('Profile saved successfully!');
+      // Refresh completion after save
+      const comp = await fetchProfileCompletion();
+      setCompletion(comp);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : (() => {
+        try { return JSON.stringify(e); } catch { return 'Unknown error'; }
+      })();
+      console.error('Save profile error:', e);
+      toast.error(`Failed to save profile: ${msg}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -283,6 +413,25 @@ export function ProfileEdit({ onBack: _onBack, initialTab = 'personal' }: Profil
               <p className="text-muted-foreground mt-2">
                 Update your information to stand out to employers
               </p>
+              {/* Profile completion */}
+              <div className="mt-3 max-w-md">
+                <div className="flex items-center justify-between text-sm mb-1">
+                  <span className="text-muted-foreground">Profile completion</span>
+                  <span className="font-medium">{completion.percentage}%</span>
+                </div>
+                <div className="h-2 rounded-full bg-gray-200 overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all"
+                    style={{ width: `${Math.min(100, Math.max(0, completion.percentage))}%` }}
+                  />
+                </div>
+                {completion.missing.length > 0 && (
+                  <div className="mt-2 text-xs text-muted-foreground">
+                    Missing: {completion.missing.slice(0,3).join(', ')}
+                    {completion.missing.length > 3 ? ` and ${completion.missing.length - 3} more` : ''}
+                  </div>
+                )}
+              </div>
             </div>
             <div className="flex gap-3">
               <Button 
@@ -294,10 +443,11 @@ export function ProfileEdit({ onBack: _onBack, initialTab = 'personal' }: Profil
               </Button>
               <Button 
                 onClick={handleSaveProfile}
-                className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
+                disabled={loading}
+                className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 disabled:opacity-60"
               >
                 <Save className="h-4 w-4 mr-2" />
-                Save Changes
+                {loading ? 'Saving…' : 'Save Changes'}
               </Button>
             </div>
           </div>
@@ -650,11 +800,11 @@ export function ProfileEdit({ onBack: _onBack, initialTab = 'personal' }: Profil
                           </div>
                         </div>
                         <div className="flex gap-2">
-                          <Button variant="outline" size="sm">
+                          <Button variant="outline" size="sm" onClick={handleViewResume}>
                             <Eye className="h-4 w-4 mr-2" />
                             View
                           </Button>
-                          <Button variant="outline" size="sm">
+                          <Button variant="outline" size="sm" onClick={handleDownloadResume}>
                             <Download className="h-4 w-4 mr-2" />
                             Download
                           </Button>

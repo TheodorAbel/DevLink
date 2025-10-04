@@ -37,9 +37,9 @@ export default function VerifyEmailPage() {
         return;
       }
 
-      // Try fetching user directly (session may already be active)
+      // Try fetching user directly; if access_token present, pass it for reliability
       const { data: userData, error: userError } =
-        await supabase.auth.getUser();
+        await supabase.auth.getUser(access_token || undefined);
       const user = userData?.user;
 
       console.log("👤 Fetched user:", user);
@@ -58,25 +58,43 @@ export default function VerifyEmailPage() {
 
       console.log("✅ Email confirmed at:", user.email_confirmed_at);
 
-      // Fetch role from public.users
+      // Fetch role from public.users; fallback to metadata role if missing
       const { data: publicUser, error: publicError } = await supabase
         .from("users")
         .select("role")
         .eq("id", user.id)
         .single();
 
-      console.log("🔍 public.users lookup:", publicUser);
-      if (publicError || !publicUser?.role) {
+      console.log("🔍 public.users lookup:", publicUser, publicError);
+      let dbRole = publicUser?.role as string | undefined;
+      const metaRole = (user.user_metadata?.role as string | undefined)?.toLowerCase();
+
+      if (!dbRole) {
+        // Attempt to upsert a minimal users row from metadata so subsequent guards work
+        const fallbackRole = metaRole ?? ROLES.SEEKER;
+        console.log("ℹ️ Upserting users row with fallback role:", fallbackRole);
+        const { error: upsertErr } = await supabase
+          .from("users")
+          .upsert({ id: user.id, email: user.email, name: user.user_metadata?.name ?? "User", role: fallbackRole }, { onConflict: "id" });
+        if (upsertErr) {
+          console.error("❌ Upsert users failed:", upsertErr);
+        } else {
+          dbRole = fallbackRole;
+        }
+      }
+
+      const effectiveRole = dbRole ?? metaRole ?? null;
+      if (!effectiveRole) {
         console.warn("❌ Role missing or lookup failed");
         setStatus("error");
         return;
       }
 
-      console.log("✅ Role found:", publicUser.role);
+      console.log("✅ Role resolved:", effectiveRole);
       setStatus("verified");
 
       setTimeout(() => {
-        switch (publicUser.role) {
+        switch (effectiveRole) {
           case ROLES.SEEKER:
             router.push("/seeker");
             break;

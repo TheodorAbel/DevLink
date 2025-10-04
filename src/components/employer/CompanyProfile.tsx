@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { Switch } from "./ui/switch";
 import { toast } from "sonner";
+import { supabase } from "@/lib/supabaseClient";
 
 interface CultureItem { title: string; description?: string }
 interface MediaItem { 
@@ -182,7 +183,7 @@ export function CompanyProfile() {
 
   // Removed unused logoFile state
 
-  const handleSave = () => {
+  const handleSave = async () => {
     // Validate media before saving
     const media = profileData.media ?? [];
     const imageCount = media.filter(m => m.type === 'image').length;
@@ -203,8 +204,115 @@ export function CompanyProfile() {
       toast.error(`Videos must be under ${Math.floor(MEDIA_LIMITS.MAX_VIDEO_DURATION / 60)} minutes`);
       return;
     }
-    
-    toast.success('Company profile updated successfully!');
+    // Build payload mapping UI -> schema
+    const socials = profileData.socials || {};
+    const show = profileData.display || {};
+
+    // location: attempt to split "City, Country"; if not possible, send city only
+    let city = profileData.location || '';
+    let country = '';
+    if (profileData.location?.includes(',')) {
+      const [c1, ...rest] = profileData.location.split(',');
+      city = c1.trim();
+      country = rest.join(',').trim();
+    }
+
+    // required fields sanity (schema requires: company_name, industry, company_size, country, city, description)
+    if (!profileData.companyName || !profileData.industry || !profileData.companySize || !city || !profileData.description || !country) {
+      toast.error('Please fill Company Name, Industry, Company Size, Location as "City, Country" and Description');
+      return;
+    }
+
+    const payload: any = {
+      company_name: profileData.companyName,
+      logo_url: profileData.logo || null,
+      cover_image_url: null,
+      website_url: profileData.website || null,
+      industry: profileData.industry,
+      company_size: profileData.companySize,
+      founded_year: profileData.founded ? Number(profileData.founded) || null : null,
+      headquarters: null,
+      registration_number: null,
+      tax_id: null,
+      country,
+      city,
+      address: profileData.contacts?.address || null,
+      tagline: profileData.slogan || null,
+      description: profileData.description,
+      culture: null,
+      specialties: null,
+      benefits: null,
+      remote_policy: profileData.remotePolicy?.toLowerCase() || null,
+      linkedin_url: socials.linkedin || null,
+      twitter_url: socials.twitter || null,
+      facebook_url: socials.facebook || null,
+      github_url: socials.github || null,
+      youtube_url: socials.youtube || null,
+      contact_email: profileData.contacts?.email || null,
+      contact_phone: profileData.contacts?.phone || null,
+      show_employees: show.showEmployees ?? true,
+      show_culture: show.showCulture ?? true,
+      show_media: show.showMedia ?? true,
+      show_leadership: show.showLeadership ?? true,
+      show_hiring: show.showHiring ?? true,
+      show_contacts: show.showContacts ?? true,
+      show_socials: show.showSocials ?? true,
+      hiring_process: profileData.hiringProcess || null,
+
+      culture_values: (profileData.cultureValues || []).map((v, i) => ({
+        title: v.title,
+        description: v.description || null,
+        display_order: i,
+      })),
+      leaders: (profileData.leaders || []).map((l, i) => ({
+        name: l.name,
+        title: l.title,
+        photo_url: l.photoUrl || null,
+        linkedin_url: l.linkedin || null,
+        display_order: i,
+      })),
+      media: (profileData.media || []).map((m, i) => ({
+        media_type: m.type,
+        url: m.url,
+        title: m.title || null,
+        thumbnail_url: m.thumbnail || null,
+        file_size: m.size ?? null,
+        duration_seconds: m.duration ?? null,
+        display_order: i,
+      })),
+    };
+
+    try {
+      const { data: { session }, error: sessErr } = await supabase.auth.getSession();
+      if (sessErr || !session?.access_token) {
+        toast.error('Not authenticated');
+        return;
+      }
+
+      const res = await fetch('/api/company/profile', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const out = await res.json().catch(() => ({}));
+      // Debug logs for verification
+      // eslint-disable-next-line no-console
+      console.log('Save company response:', res.status, out);
+      if (!res.ok) {
+        console.error('Save company failed:', out);
+        toast.error(out?.details || out?.error || 'Failed to save company profile');
+        return;
+      }
+
+      toast.success('Company profile saved');
+    } catch (e: any) {
+      console.error('Save company exception:', e);
+      toast.error(e?.message || 'Error saving company profile');
+    }
   };
 
   const handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {

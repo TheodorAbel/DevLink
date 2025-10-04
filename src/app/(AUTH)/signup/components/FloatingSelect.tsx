@@ -18,10 +18,12 @@ export function FloatingSelect({
 }: FloatingSelectProps) {
   const [isFocused, setIsFocused] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
-  const hasValue = value.length > 0;
+  const safeValue = value ?? '';
+  const safeOptions = Array.isArray(options) ? options : [];
+  const hasValue = safeValue.length > 0;
   const isFloating = isFocused || hasValue || isOpen;
 
-  const selectedOption = options.find(opt => opt.value === value);
+  const selectedOption = safeOptions.find(opt => opt.value === safeValue);
 
   const handleSelect = (optionValue: string) => {
     onChange(optionValue);
@@ -47,7 +49,7 @@ export function FloatingSelect({
       >
         <div className="flex items-center justify-between">
           <span className={hasValue ? 'text-gray-900' : 'text-transparent'}>
-            {selectedOption?.label || 'placeholder'}
+            {selectedOption?.label || 'Select...'}
           </span>
           <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
         </div>
@@ -68,13 +70,13 @@ export function FloatingSelect({
 
       {isOpen && (
         <div className="absolute top-full left-0 right-0 z-10 mt-2 bg-white backdrop-blur-sm border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-y-auto">
-          {options.map((option) => (
+          {safeOptions.map((option) => (
             <div
               key={option.value}
               className={`
                 px-4 py-3 cursor-pointer transition-colors
                 hover:bg-gray-50 first:rounded-t-xl last:rounded-b-xl
-                ${option.value === value ? 'bg-blue-50 text-blue-600' : 'text-gray-900'}
+                ${option.value === safeValue ? 'bg-blue-50 text-blue-600' : 'text-gray-900'}
               `}
               onClick={() => handleSelect(option.value)}
             >

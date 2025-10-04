@@ -1,6 +1,7 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
+import { Toaster as SonnerToaster } from "sonner";
 import { ThemeProvider } from "@/lib/theme-context";
 import { ConditionalHeader } from "@/components/ConditionalHeader";
 
@@ -33,6 +34,7 @@ export default function RootLayout({
           <ConditionalHeader />
           {children}
           <Toaster position="top-center" reverseOrder={false} />
+          <SonnerToaster position="top-center" richColors closeButton />
         </ThemeProvider>
       </body>
     </html>

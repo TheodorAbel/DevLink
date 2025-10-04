@@ -31,6 +31,8 @@ export async function signIn(email: string, password: string) {
     password,
   });
   if (error || !data.session) {
+    // Debug: surface the exact Supabase error in the console for troubleshooting
+    console.error('signIn error:', error);
     return { error };
   }
   return { user: data.user, session: data.session };
