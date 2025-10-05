@@ -237,7 +237,21 @@ export default function EmployerSignupPage() {
         return;
       }
 
-      // Ensure the user role is employer before redirecting
+      const companyId = out?.company_id;
+
+      // Update user metadata with company_id for client-side access
+      if (companyId) {
+        try {
+          await supabase.auth.updateUser({
+            data: { company_id: companyId, role: 'employer' }
+          });
+        } catch (e) {
+          // eslint-disable-next-line no-console
+          console.error('Failed to update user metadata:', e);
+        }
+      }
+
+      // Ensure the user role is employer in DB before redirecting
       try {
         const userId = (session as any)?.user?.id;
         if (userId) {
@@ -256,7 +270,7 @@ export default function EmployerSignupPage() {
       }
 
       toast.success('Company profile saved. Redirecting to dashboard...');
-      router.push('/employer');
+      router.push('/employer/dashboard');
     } catch (e: any) {
       console.error('Error submitting application:', e);
       toast.error(e?.message || 'Failed to submit application. Please try again.');

@@ -8,12 +8,14 @@ import { Badge } from "./ui/badge";
 import { Switch } from "./ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
-import { X, Plus, Save, Eye, Trash2, HelpCircle, Calendar as CalendarIcon } from "lucide-react";
+import { X, Plus, Save, Eye, Trash2, HelpCircle, Calendar as CalendarIcon, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { Calendar } from "./ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { cn } from "../../lib/utils";
+import { supabase } from "@/lib/supabaseClient";
+import { useRouter } from "next/navigation";
 
 interface ScreeningQuestion {
   id: string;
@@ -58,6 +60,7 @@ export function PostJobForm({
   onPreview,
   initialData = {} 
 }: PostJobFormProps) {
+  const router = useRouter();
   const [formData, setFormData] = useState<JobFormData>({
     title: '',
     location: '',
@@ -91,6 +94,7 @@ export function PostJobForm({
     autoFilter: false
   });
   const [newOption, setNewOption] = useState('');
+  const [isPublishing, setIsPublishing] = useState(false);
 
   const handleAddSkill = () => {
     if (newSkill.trim() && !formData.skills.includes(newSkill.trim())) {
@@ -182,17 +186,29 @@ export function PostJobForm({
     toast.success("Job saved as draft");
   };
 
-  const handlePublish = () => {
-    if (!formData.title || !formData.description || !formData.jobType) {
-      toast.error("Please fill in all required fields");
+  const handlePublish = async () => {
+    if (isPublishing) return;
+    setIsPublishing(true);
+    // Basic required fields
+    if (!formData.title.trim() || !formData.description.trim() || !formData.jobType.trim()) {
+      toast.error("Please fill in all required fields: Title, Job Type, Description");
+      setIsPublishing(false);
       return;
     }
+    // Schema requires location NOT NULL
+    if (!formData.location.trim()) {
+      toast.error("Location is required");
+      setIsPublishing(false);
+      return;
+    }
+
     // Validate application method specifics
     if (formData.applicationMethod === 'website') {
       const url = (formData.applicationUrl || '').trim();
       const isValidUrl = /^https?:\/\//i.test(url);
       if (!url || !isValidUrl) {
-        toast.error("Please provide a valid application URL starting with http or https");
+        toast.error("Please provide a valid application URL (http/https)");
+        setIsPublishing(false);
         return;
       }
     }
@@ -201,11 +217,192 @@ export function PostJobForm({
       const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
       if (!email || !isValidEmail) {
         toast.error("Please provide a valid application email address");
+        setIsPublishing(false);
         return;
       }
     }
+
+    // Salary validations based on type
+    if (formData.salaryType === 'range') {
+      const min = Number(formData.salaryMin);
+      const max = Number(formData.salaryMax);
+      if (!Number.isFinite(min) || !Number.isFinite(max) || min <= 0 || max <= 0 || min > max) {
+        toast.error("Please provide a valid salary range (min <= max, both > 0)");
+        setIsPublishing(false);
+        return;
+      }
+    }
+    if (formData.salaryType === 'fixed') {
+      const amt = Number(formData.salary);
+      if (!Number.isFinite(amt) || amt <= 0) {
+        toast.error("Please provide a valid fixed salary amount (> 0)");
+        setIsPublishing(false);
+        return;
+      }
+    }
+
+    // Resolve current user + company_id
+    const { data: sessionRes } = await supabase.auth.getSession();
+    const user = sessionRes?.session?.user ?? null;
+    if (!user) {
+      toast.error("You must be logged in to publish a job");
+      setIsPublishing(false);
+      return;
+    }
+
+    // Prefer server bootstrap (service role) to get role/company_id reliably
+    let companyId: string | undefined = undefined;
+    let effectiveRole: string | undefined = undefined;
+    try {
+      const accessToken = sessionRes?.session?.access_token;
+      const res = await fetch('/api/user/bootstrap', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      const out = await res.json().catch(() => ({}));
+      // eslint-disable-next-line no-console
+      console.log('Bootstrap result:', res.status, out);
+      companyId = out?.company_id || undefined;
+      effectiveRole = (out?.role as string | undefined)?.toLowerCase();
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error('Bootstrap request failed:', e);
+    }
+
+    // Fallbacks to metadata if server failed
+    if (!companyId) companyId = user.user_metadata?.company_id as string | undefined;
+    if (!effectiveRole) effectiveRole = (user.user_metadata?.role as string | undefined)?.toLowerCase();
+
+    if (effectiveRole !== 'employer') {
+      toast.error("Only employer accounts can publish jobs. Your role: " + (effectiveRole || 'unknown'));
+      setIsPublishing(false);
+      return;
+    }
+
+    if (!companyId) {
+      toast.error("Complete your company profile to link a company before posting jobs");
+      setIsPublishing(false);
+      return;
+    }
+
+    // eslint-disable-next-line no-console
+    console.log('Publishing with company_id:', companyId);
+
+    // Map UI fields to schema
+    const jobTypeMap: Record<string, string> = {
+      'full-time': 'full_time',
+      'part-time': 'part_time',
+      'contract': 'contract',
+      'freelance': 'contract', // map freelance to contract if using schema set
+      'internship': 'internship',
+    };
+
+    const applicationMethodMap: Record<JobFormData['applicationMethod'], 'internal' | 'external' | 'email'> = {
+      platform: 'internal',
+      website: 'external',
+      email: 'email',
+    };
+
+    // Salary mapping
+    let salary_type: string | null = null;
+    let salary_min: number | null = null;
+    let salary_max: number | null = null;
+    let salary_fixed: number | null = null;
+    let salary_currency: string | null = formData.currency || 'ETB';
+    let custom_salary_message: string | null = null;
+
+    if (formData.salaryType === 'range') {
+      salary_type = 'range';
+      salary_min = Number(formData.salaryMin);
+      salary_max = Number(formData.salaryMax);
+    } else if (formData.salaryType === 'fixed') {
+      salary_type = 'fixed';
+      salary_fixed = Number(formData.salary);
+    } else {
+      salary_type = 'competitive';
+      custom_salary_message = formData.customSalaryMessage?.trim() || 'Competitive salary based on experience';
+    }
+
+    // Insert job
+    const jobPayload = {
+      company_id: companyId,
+      posted_by_user_id: user.id,
+      title: formData.title.trim(),
+      location: formData.location.trim(),
+      job_type: jobTypeMap[formData.jobType] || formData.jobType,
+      is_remote: !!formData.isRemote,
+      remote_policy: formData.isRemote ? 'hybrid' : null as any,
+      salary_type,
+      salary_min,
+      salary_max,
+      salary_fixed,
+      salary_currency,
+      custom_salary_message,
+      description: formData.description.trim(),
+      requirements: formData.requirements.length ? formData.requirements : null,
+      skills_required: formData.skills.length ? formData.skills : null,
+      application_deadline: formData.deadline ? new Date(formData.deadline) : null,
+      application_method: applicationMethodMap[formData.applicationMethod],
+      application_url: formData.applicationMethod === 'website' ? (formData.applicationUrl || null) : null,
+      application_email: formData.applicationMethod === 'email' ? (formData.applicationEmail || null) : null,
+      status: 'active',
+      published_at: new Date().toISOString(),
+    } as const;
+
+    const { data: inserted, error: insertErr } = await supabase
+      .from('jobs')
+      .insert(jobPayload)
+      .select('id')
+      .maybeSingle();
+
+    if (insertErr || !inserted?.id) {
+      // Surface details for debugging
+      // eslint-disable-next-line no-console
+      console.error('Publish job failed:', { insertErr });
+      if ((insertErr as any)?.message?.includes('RLS')) {
+        toast.error("Permission denied. Ensure your account is linked to a company.");
+      } else {
+        toast.error("Failed to publish job. Please try again.");
+      }
+      setIsPublishing(false);
+      return;
+    }
+
+    const jobId = inserted.id as string;
+
+    // Insert screening questions if any
+    if (formData.screeningQuestions.length) {
+      const qTypeMap: Record<ScreeningQuestion['type'], 'text' | 'multiple_choice' | 'yes_no'> = {
+        'yes-no': 'yes_no',
+        'multiple-choice': 'multiple_choice',
+        'checkbox': 'multiple_choice',
+        'short-answer': 'text',
+      };
+
+      const rows = formData.screeningQuestions.map((q, idx) => ({
+        job_id: jobId,
+        question_text: q.text,
+        question_type: qTypeMap[q.type],
+        options: q.options && q.options.length ? q.options : null,
+        is_required: q.required,
+        auto_filter: q.autoFilter,
+        display_order: idx,
+      }));
+
+      const { error: qErr } = await supabase
+        .from('screening_questions')
+        .insert(rows);
+
+      if (qErr) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to insert screening questions:', qErr);
+        toast.warning("Job published, but adding screening questions failed");
+      }
+    }
+
     onPublish(formData);
-    toast.success("Job published successfully!");
+    toast.success("Job published successfully");
+    setIsPublishing(false);
   };
 
   return (
@@ -222,8 +419,15 @@ export function PostJobForm({
               <Save className="h-4 w-4 mr-2" />
               Save Draft
             </Button>
-            <Button onClick={handlePublish}>
-              Publish Job
+            <Button onClick={handlePublish} disabled={isPublishing}>
+              {isPublishing ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Publishing...
+                </span>
+              ) : (
+                'Publish Job'
+              )}
             </Button>
           </div>
         </div>

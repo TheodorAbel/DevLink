@@ -31,41 +31,28 @@ export default function RoleGuard({ allowedRole, children }: RoleGuardProps) {
         return;
       }
 
-      const { data: profile, error } = await supabase
-        .from("users")
-        .select("role")
-        .eq("id", user.id)
-        .single();
-
-      if (error) {
+      // Resolve role via secure server endpoint to bypass RLS
+      let effectiveRole: string | null = null;
+      try {
+        const accessToken = session?.access_token;
+        const res = await fetch("/api/user/bootstrap", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+        const out = await res.json().catch(() => ({}));
         // eslint-disable-next-line no-console
-        console.error("RoleGuard users select error:", error);
-      }
-      // eslint-disable-next-line no-console
-      console.log("RoleGuard DB role:", profile?.role, "allowed:", allowedRole);
-      // eslint-disable-next-line no-console
-      console.log("RoleGuard metadata role:", user.user_metadata?.role);
-
-      let dbRole = (profile?.role as string | undefined)?.toLowerCase();
-      const metaRole = (user.user_metadata?.role as string | undefined)?.toLowerCase();
-
-      // If no DB role or select failed, attempt to upsert from metadata (first login path)
-      if (!dbRole) {
-        const fallbackRole = metaRole ?? 'seeker';
+        console.log("RoleGuard bootstrap response:", res.status, out);
+        const metaRole = (user.user_metadata?.role as string | undefined)?.toLowerCase();
+        effectiveRole = (out?.role as string | undefined)?.toLowerCase() ?? metaRole ?? null;
+      } catch (e) {
         // eslint-disable-next-line no-console
-        console.log('RoleGuard: resolving role via metadata and upsert:', fallbackRole);
-        const { error: upsertErr } = await supabase
-          .from('users')
-          .upsert({ id: user.id, role: fallbackRole, email: user.email, name: user.user_metadata?.name ?? 'User' }, { onConflict: 'id' });
-        if (upsertErr) {
-          // eslint-disable-next-line no-console
-          console.error('RoleGuard upsert error:', upsertErr);
-        } else {
-          dbRole = fallbackRole;
-        }
+        console.error("RoleGuard bootstrap call failed:", e);
+        const metaRole = (user.user_metadata?.role as string | undefined)?.toLowerCase();
+        effectiveRole = metaRole ?? null;
       }
 
-      const effectiveRole = (dbRole ?? metaRole ?? null) as string | null;
       if (!effectiveRole || effectiveRole !== allowedRole.toLowerCase()) {
         setAuthorized(false);
         setLoading(false);

@@ -218,6 +218,9 @@ CREATE TABLE public.companies (
   -- Public hiring process text (CompanyProfile.hiringProcess)
   hiring_process TEXT,
 
+  -- Optional: track who created/owns this company profile
+  owner_user_id UUID REFERENCES public.users(id),
+
   -- Audit fields
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -749,6 +752,9 @@ WITH CHECK (company_id = (SELECT company_id FROM public.users WHERE id = auth.ui
 CREATE POLICY "Anyone can view active jobs" ON public.jobs FOR SELECT USING (status = 'active');
 CREATE POLICY "Company can manage own jobs (single-company model)" ON public.jobs FOR ALL
 USING (
+  company_id = (SELECT company_id FROM public.users WHERE id = auth.uid())
+)
+WITH CHECK (
   company_id = (SELECT company_id FROM public.users WHERE id = auth.uid())
 );
 
