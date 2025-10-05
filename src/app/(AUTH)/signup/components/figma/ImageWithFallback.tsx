@@ -1,3 +1,5 @@
+/* eslint-disable react/prop-types */
+/* eslint-disable @next/next/no-img-element */
 import React, { useState } from 'react'
 
 const ERROR_IMG_SRC =

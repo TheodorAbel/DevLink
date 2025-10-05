@@ -5,10 +5,10 @@ import type { CompanyProfilePayload } from '@/types/company'
 
 // Helper: pick only allowed keys for companies table
 function pickCompanyCore(body: CompanyProfilePayload) {
-  const out: any = {}
+  const out: Record<string, unknown> = {}
 
   // Helper that skips undefined, and skips empty strings/arrays; includes booleans and numbers (incl. 0)
-  const add = (key: string, value: any) => {
+  const add = (key: string, value: unknown) => {
     if (value === undefined) return
     if (typeof value === 'string' && value.trim() === '') return
     if (Array.isArray(value) && value.length === 0) return
@@ -59,7 +59,6 @@ export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
   try {
-    // eslint-disable-next-line no-console
     console.log('[API] /api/company/profile POST hit')
     const authHeader = req.headers.get('authorization') || ''
     const token = authHeader.startsWith('Bearer ')
@@ -90,12 +89,17 @@ export async function POST(req: NextRequest) {
     }
 
     const payload = (await req.json()) as CompanyProfilePayload
-    // eslint-disable-next-line no-console
     console.log('[API] payload keys:', Object.keys(payload || {}))
 
     // Basic required fields validation (schema requires these NOT NULL):
     const required = ['company_name','industry','company_size','country','city','description'] as const
-    const missing = required.filter((k) => !(payload as any)?.[k] || ((payload as any)[k] + '').trim() === '')
+    const p = payload as Record<string, unknown>
+    const missing = required.filter((k) => {
+      const v = p[k]
+      if (v === undefined || v === null) return true
+      if (typeof v === 'string' && v.trim() === '') return true
+      return false
+    })
     if (missing.length) {
       return NextResponse.json({ error: 'Missing required fields', details: `Missing: ${missing.join(', ')}` }, { status: 400 })
     }
@@ -118,9 +122,9 @@ export async function POST(req: NextRequest) {
         .single()
 
       if (createErr || !created) {
-        // eslint-disable-next-line no-console
         console.error('[API] create company error:', createErr)
-        if ((createErr as any)?.code === '23505') { // unique_violation
+        const code = (createErr as { code?: string } | null | undefined)?.code
+        if (code === '23505') { // unique_violation
           return NextResponse.json(
             { error: 'Company name already exists', details: 'Please choose a different company name.' },
             { status: 409 }
@@ -136,7 +140,6 @@ export async function POST(req: NextRequest) {
         .update({ company_id: companyId })
         .eq('id', userId)
       if (linkErr) {
-        // eslint-disable-next-line no-console
         console.error('[API] link user->company error:', linkErr)
         return NextResponse.json({ error: 'Failed to link user to company', details: linkErr.message }, { status: 400 })
       }
@@ -147,31 +150,31 @@ export async function POST(req: NextRequest) {
         .update(core)
         .eq('id', companyId)
       if (updateErr) {
-        // eslint-disable-next-line no-console
         console.error('[API] update company error:', updateErr)
         return NextResponse.json({ error: 'Failed to update company', details: updateErr.message }, { status: 400 })
       }
     }
 
     // Replace-all helpers for child tables
-    async function replaceAll(
+    type ReplaceAllResult = { ok?: true; error?: { message: string } };
+    async function replaceAll<TIn extends Record<string, unknown>, TOut extends Record<string, unknown>>(
       table: string,
-      rows: any[] | undefined | null,
-      map: (item: any) => any
-    ) {
-      if (!rows) return null
+      rows: TIn[] | undefined | null,
+      map: (item: TIn) => TOut
+    ): Promise<ReplaceAllResult> {
+      if (!rows) return { ok: true }
       // Delete existing
       const { error: delErr } = await supabase
         .from(table)
         .delete()
         .eq('company_id', companyId!)
-      if (delErr) return { error: delErr }
+      if (delErr) return { error: { message: delErr.message } }
       if (rows.length === 0) return { ok: true }
       // Insert new
       const { error: insErr } = await supabase
         .from(table)
         .insert(rows.map(map))
-      if (insErr) return { error: insErr }
+      if (insErr) return { error: { message: insErr.message } }
       return { ok: true }
     }
 
@@ -183,10 +186,9 @@ export async function POST(req: NextRequest) {
         description: v.description ?? null,
         display_order: v.display_order ?? 0,
       }))
-      if ((r as any)?.error) {
-        // eslint-disable-next-line no-console
-        console.error('[API] culture values error:', (r as any).error)
-        return NextResponse.json({ error: 'Failed to save culture values', details: (r as any).error.message }, { status: 400 })
+      if (r.error) {
+        console.error('[API] culture values error:', r.error)
+        return NextResponse.json({ error: 'Failed to save culture values', details: r.error.message }, { status: 400 })
       }
     }
 
@@ -200,10 +202,9 @@ export async function POST(req: NextRequest) {
         linkedin_url: v.linkedin_url ?? null,
         display_order: v.display_order ?? 0,
       }))
-      if ((r as any)?.error) {
-        // eslint-disable-next-line no-console
-        console.error('[API] leaders error:', (r as any).error)
-        return NextResponse.json({ error: 'Failed to save leaders', details: (r as any).error.message }, { status: 400 })
+      if (r.error) {
+        console.error('[API] leaders error:', r.error)
+        return NextResponse.json({ error: 'Failed to save leaders', details: r.error.message }, { status: 400 })
       }
     }
 
@@ -219,10 +220,9 @@ export async function POST(req: NextRequest) {
         duration_seconds: m.duration_seconds ?? null,
         display_order: m.display_order ?? 0,
       }))
-      if ((r as any)?.error) {
-        // eslint-disable-next-line no-console
-        console.error('[API] media error:', (r as any).error)
-        return NextResponse.json({ error: 'Failed to save media', details: (r as any).error.message }, { status: 400 })
+      if (r.error) {
+        console.error('[API] media error:', r.error)
+        return NextResponse.json({ error: 'Failed to save media', details: r.error.message }, { status: 400 })
       }
     }
 
@@ -237,7 +237,6 @@ export async function POST(req: NextRequest) {
           currency: payload.job_defaults.currency ?? 'ETB',
         }, { onConflict: 'company_id' })
       if (jdErr) {
-        // eslint-disable-next-line no-console
         console.error('[API] job defaults error:', jdErr)
         return NextResponse.json({ error: 'Failed to save job defaults', details: jdErr.message }, { status: 400 })
       }
@@ -256,7 +255,6 @@ export async function POST(req: NextRequest) {
           payment_method_status: payload.billing.payment_method_status ?? null,
         }, { onConflict: 'company_id' })
       if (billErr) {
-        // eslint-disable-next-line no-console
         console.error('[API] billing error:', billErr)
         return NextResponse.json({ error: 'Failed to save billing', details: billErr.message }, { status: 400 })
       }
@@ -270,19 +268,17 @@ export async function POST(req: NextRequest) {
         subject: t.subject,
         content: t.content,
       }))
-      if ((r as any)?.error) {
-        // eslint-disable-next-line no-console
-        console.error('[API] templates error:', (r as any).error)
-        return NextResponse.json({ error: 'Failed to save message templates', details: (r as any).error.message }, { status: 400 })
+      if (r.error) {
+        console.error('[API] templates error:', r.error)
+        return NextResponse.json({ error: 'Failed to save message templates', details: r.error.message }, { status: 400 })
       }
     }
 
-    // eslint-disable-next-line no-console
     console.log('[API] company saved ok:', companyId)
     return NextResponse.json({ ok: true, company_id: companyId })
-  } catch (e: any) {
-    // eslint-disable-next-line no-console
+  } catch (e: unknown) {
     console.error('[API] unexpected error:', e)
-    return NextResponse.json({ error: 'Unexpected error', details: e?.message ?? String(e) }, { status: 500 })
+    const message = e instanceof Error ? e.message : String(e)
+    return NextResponse.json({ error: 'Unexpected error', details: message }, { status: 500 })
   }
 }

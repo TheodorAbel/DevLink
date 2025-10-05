@@ -59,7 +59,24 @@ type Education = {
 };
 
 // Mock profile data
-const initialProfile = {
+type InitialProfile = {
+  personalInfo: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    location: string;
+    bio: string;
+    website?: string;
+    linkedin?: string;
+  };
+  skills: string[];
+  experience: Experience[];
+  education: Education[];
+  resume: { fileName: string; uploadDate: string; size: string };
+};
+
+const initialProfile: InitialProfile = {
   personalInfo: {
     firstName: 'Sarah',
     lastName: 'Johnson',
@@ -372,8 +389,8 @@ export function ProfileEdit({ onBack: _onBack, initialTab = 'personal' }: Profil
           phone: profile.personalInfo.phone,
           location: profile.personalInfo.location,
           bio: profile.personalInfo.bio,
-          website: profile.personalInfo.website,
-          linkedin: profile.personalInfo.linkedin,
+          website: profile.personalInfo.website ?? '',
+          linkedin: profile.personalInfo.linkedin ?? '',
         },
         skills: profile.skills,
         experience: profile.experience,
@@ -1087,7 +1104,7 @@ function EducationCard({ education, isEditing, onEdit, onSave, onCancel, onRemov
 
 // Profile Preview Component
 function ProfilePreview({ profile }: { profile: {
-  personalInfo: { firstName: string; lastName: string; bio: string; location: string; email: string };
+  personalInfo: { firstName: string; lastName: string; bio: string; location: string; email: string; website?: string; linkedin?: string };
   skills: string[];
   experience: Experience[];
   education: Education[];

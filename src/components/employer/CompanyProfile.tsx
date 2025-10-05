@@ -58,7 +58,7 @@ interface CompanyProfileData {
   verificationStatus: 'verified' | 'pending' | 'not_submitted';
   // optional essentials
   remotePolicy?: 'Remote-first' | 'Hybrid' | 'Onsite';
-  socials?: { linkedin?: string; twitter?: string; github?: string; youtube?: string };
+  socials?: { linkedin?: string; twitter?: string; github?: string; youtube?: string; facebook?: string };
   cultureValues?: CultureItem[];
   media?: MediaItem[];
   leaders?: LeaderItem[];
@@ -223,7 +223,7 @@ export function CompanyProfile() {
       return;
     }
 
-    const payload: any = {
+    const payload: Record<string, unknown> = {
       company_name: profileData.companyName,
       logo_url: profileData.logo || null,
       cover_image_url: null,
@@ -298,9 +298,8 @@ export function CompanyProfile() {
         body: JSON.stringify(payload),
       });
 
-      const out = await res.json().catch(() => ({}));
+      const out = await res.json().catch(() => ({} as Record<string, unknown>));
       // Debug logs for verification
-      // eslint-disable-next-line no-console
       console.log('Save company response:', res.status, out);
       if (!res.ok) {
         console.error('Save company failed:', out);
@@ -309,9 +308,10 @@ export function CompanyProfile() {
       }
 
       toast.success('Company profile saved');
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('Save company exception:', e);
-      toast.error(e?.message || 'Error saving company profile');
+      const message = e instanceof Error ? e.message : 'Error saving company profile';
+      toast.error(message);
     }
   };
 

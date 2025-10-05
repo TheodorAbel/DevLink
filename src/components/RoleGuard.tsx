@@ -42,12 +42,10 @@ export default function RoleGuard({ allowedRole, children }: RoleGuardProps) {
           },
         });
         const out = await res.json().catch(() => ({}));
-        // eslint-disable-next-line no-console
         console.log("RoleGuard bootstrap response:", res.status, out);
         const metaRole = (user.user_metadata?.role as string | undefined)?.toLowerCase();
         effectiveRole = (out?.role as string | undefined)?.toLowerCase() ?? metaRole ?? null;
       } catch (e) {
-        // eslint-disable-next-line no-console
         console.error("RoleGuard bootstrap call failed:", e);
         const metaRole = (user.user_metadata?.role as string | undefined)?.toLowerCase();
         effectiveRole = metaRole ?? null;

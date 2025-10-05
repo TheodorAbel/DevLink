@@ -57,7 +57,7 @@ const validatePhone = (value: string) => {
 };
 
 export function Step2BusinessLegitimacy({ data, onChange }: Step2BusinessLegitimacyProps) {
-  const updateField = (field: keyof Step2Data, value: any) => {
+  const updateField = (field: keyof Step2Data, value: Step2Data[keyof Step2Data]) => {
     onChange({
       ...data,
       [field]: value,

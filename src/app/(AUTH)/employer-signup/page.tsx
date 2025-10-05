@@ -189,7 +189,7 @@ export default function EmployerSignupPage() {
       }
 
       // Map wizard data -> API payload
-      const payload: any = {
+      const payload = {
         company_name: step1Data.companyName,
         website_url: step1Data.website || null,
         industry: step1Data.industry,
@@ -213,7 +213,7 @@ export default function EmployerSignupPage() {
         show_hiring: true,
         show_contacts: true,
         show_socials: true,
-      };
+      } as const;
 
       const res = await fetch('/api/company/profile', {
         method: 'POST',
@@ -224,8 +224,7 @@ export default function EmployerSignupPage() {
         body: JSON.stringify(payload),
       });
 
-      const out = await res.json().catch(() => ({}));
-      // eslint-disable-next-line no-console
+      const out = await res.json().catch(() => ({} as Record<string, unknown>));
       console.log('Employer signup save response:', res.status, out);
       if (!res.ok) {
         if (res.status === 409) {
@@ -246,34 +245,32 @@ export default function EmployerSignupPage() {
             data: { company_id: companyId, role: 'employer' }
           });
         } catch (e) {
-          // eslint-disable-next-line no-console
           console.error('Failed to update user metadata:', e);
         }
       }
 
       // Ensure the user role is employer in DB before redirecting
       try {
-        const userId = (session as any)?.user?.id;
+        const userId = session?.user?.id;
         if (userId) {
           const { error: roleErr } = await supabase
             .from('users')
             .update({ role: 'employer' })
             .eq('id', userId);
           if (roleErr) {
-            // eslint-disable-next-line no-console
             console.error('Failed to set employer role:', roleErr);
           }
         }
       } catch (e) {
-        // eslint-disable-next-line no-console
         console.error('Unexpected error setting employer role:', e);
       }
 
       toast.success('Company profile saved. Redirecting to dashboard...');
       router.push('/employer/dashboard');
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('Error submitting application:', e);
-      toast.error(e?.message || 'Failed to submit application. Please try again.');
+      const message = e instanceof Error ? e.message : 'Failed to submit application. Please try again.';
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }
@@ -283,7 +280,6 @@ export default function EmployerSignupPage() {
     return (
       <ExtravagantWaitingPage
         status="pending"
-        companyName={step1Data.companyName}
         onEdit={() => setIsSubmitted(false)}
         onBack={() => router.push('/login')}
       />

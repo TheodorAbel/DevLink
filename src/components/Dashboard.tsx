@@ -18,6 +18,8 @@ import {
 
 import { AnimatedBackground } from './AnimatedBackground';
 import { fetchProfileStepsStatus } from '@/lib/seekerProfile';
+import { supabase } from '@/lib/supabaseClient';
+import { formatDistanceToNow } from 'date-fns';
 
 // Mock data
 const recentJobs: Job[] = [
@@ -109,6 +111,19 @@ interface DashboardProps {
 
 export function Dashboard({ onPageChange }: DashboardProps) {
   const [steps, setSteps] = useState<{ basic: boolean; experience: boolean; resume: boolean; contact: boolean }>({ basic: false, experience: false, resume: false, contact: false });
+  const [dbRecentJobs, setDbRecentJobs] = useState<Job[]>([]);
+  const [loadingJobs, setLoadingJobs] = useState(false);
+  type DbJobRow = {
+    id: string;
+    title: string;
+    location: string | null;
+    job_type: string | null;
+    description: string | null;
+    skills_required: string[] | null;
+    published_at: string | null;
+    company_id: string;
+    companies?: { company_name?: string | null } | null;
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -119,6 +134,59 @@ export function Dashboard({ onPageChange }: DashboardProps) {
         setSteps(status);
       } catch (e) {
         console.error('Failed to load profile steps status', e);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  // Load latest active jobs (newest first) for dashboard recent list
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        setLoadingJobs(true);
+        const { data, error } = await supabase
+          .from('jobs')
+          .select(`
+            id,
+            title,
+            location,
+            job_type,
+            description,
+            skills_required,
+            published_at,
+            company_id,
+            companies:company_id ( company_name )
+          `)
+          .eq('status', 'active')
+          .order('published_at', { ascending: false })
+          .limit(5);
+        if (error) throw error;
+        const mapped: Job[] = (data as DbJobRow[] | null | undefined || []).map((j) => {
+          const typeMap: Record<string, string> = {
+            full_time: 'Full-time',
+            part_time: 'Part-time',
+            contract: 'Contract',
+            internship: 'Internship',
+          };
+          return {
+            id: j.id,
+            title: j.title,
+            company: j.companies?.company_name || 'Company',
+            companyId: j.company_id,
+            location: j.location,
+            salary: 'Competitive',
+            type: typeMap[j.job_type ?? ''] || j.job_type || 'Full-time',
+            postedDate: j.published_at ? formatDistanceToNow(new Date(j.published_at), { addSuffix: true }) : 'Recently',
+            description: j.description || '',
+            skills: Array.isArray(j.skills_required) ? j.skills_required : [],
+          } as Job;
+        });
+        if (mounted) setDbRecentJobs(mapped);
+      } catch (e) {
+        console.error('Failed to load recent jobs', e);
+      } finally {
+        if (mounted) setLoadingJobs(false);
       }
     })();
     return () => { mounted = false; };
@@ -172,6 +240,9 @@ export function Dashboard({ onPageChange }: DashboardProps) {
           <p className="text-muted-foreground mt-2">
             Here&apos;s what&apos;s happening with your job search today
           </p>
+          {loadingJobs && (
+            <p className="text-sm text-muted-foreground mt-1">Loading latest jobs…</p>
+          )}
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -246,7 +317,7 @@ export function Dashboard({ onPageChange }: DashboardProps) {
                   </div>
                 </CardHeader>
                 <CardContent className="relative space-y-4">
-                  {recentJobs.map((job, index) => (
+                  {[...dbRecentJobs, ...recentJobs].slice(0, 5).map((job, index) => (
                     <motion.div
                       key={job.id}
                       initial={{ opacity: 0, x: -20 }}

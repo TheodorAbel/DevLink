@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { JobCard, Job } from './JobCard';
 import { JobDetail } from './JobDetail';
@@ -37,6 +37,8 @@ import {
 import { Slider } from './ui/slider';
 import { toast } from 'sonner';
 import { ApplicantCompanyProfileDrawer } from './ApplicantCompanyProfileDrawer';
+import { supabase } from '@/lib/supabaseClient';
+import { formatDistanceToNow } from 'date-fns';
 
 // Mock data - expanded for pagination testing
 const mockJobs: Job[] = [
@@ -176,7 +178,7 @@ const mockJobs: Job[] = [
   }
 ];
 
-const recentlyViewedJobs = mockJobs.slice(0, 3);
+// moved to component body: derive from combined jobs
 
 interface JobListProps {
   onJobSelect: (jobId: string) => void;
@@ -193,17 +195,127 @@ export function JobList({ onJobSelect: _onJobSelect }: JobListProps) {
   
   // Saved jobs state
   const [savedJobs, setSavedJobs] = useState<Set<string>>(new Set());
+  // DB jobs state
+  const [dbJobs, setDbJobs] = useState<Job[]>([]);
+  const [loadingDb, setLoadingDb] = useState(false);
+  const [dbError, setDbError] = useState<string | null>(null);
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const jobsPerPage = 6;
   
   // New state for job detail view
-  // selectedJobId removed since it was not being used to render anything
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [showJobDetail, setShowJobDetail] = useState(false);
   const [autoOpenApply, setAutoOpenApply] = useState(false);
   const [companyOpen, setCompanyOpen] = useState(false);
   const [companyData, setCompanyData] = useState<null | Parameters<typeof ApplicantCompanyProfileDrawer>[0]["company"]>(null);
+
+  type DbJobRow = {
+    id: string;
+    title: string;
+    location: string | null;
+    job_type: string | null;
+    salary_type: string | null;
+    salary_min: number | null;
+    salary_max: number | null;
+    salary_fixed: number | null;
+    salary_currency: string | null;
+    custom_salary_message: string | null;
+    description: string | null;
+    skills_required: string[] | null;
+    published_at: string | null;
+    company_id: string;
+    // Supabase could return an object or array depending on relationship setup
+    companies?: { company_name: string | null } | Array<{ company_name: string | null }> | null;
+  };
+
+  // Fetch jobs from Supabase (active jobs, newest first)
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        setLoadingDb(true);
+        setDbError(null);
+        const { data, error } = await supabase
+          .from('jobs')
+          .select(`
+            id,
+            title,
+            location,
+            job_type,
+            salary_type,
+            salary_min,
+            salary_max,
+            salary_fixed,
+            salary_currency,
+            custom_salary_message,
+            description,
+            skills_required,
+            published_at,
+            company_id,
+            companies:company_id ( company_name )
+          `)
+          .eq('status', 'active')
+          .order('published_at', { ascending: false, nullsFirst: false });
+
+        if (error) {
+          throw error;
+        }
+
+        const mapped: Job[] = (data as DbJobRow[] | null | undefined || []).map((j) => {
+          // Build salary string
+          let salary = 'Competitive';
+          if (j.salary_type === 'range' && j.salary_min && j.salary_max) {
+            salary = `${j.salary_currency || 'ETB'} ${j.salary_min} - ${j.salary_max}`;
+          } else if (j.salary_type === 'fixed' && j.salary_fixed) {
+            salary = `${j.salary_currency || 'ETB'} ${j.salary_fixed}`;
+          } else if (j.custom_salary_message) {
+            salary = j.custom_salary_message;
+          }
+
+          const typeMap: Record<string, string> = {
+            full_time: 'Full-time',
+            part_time: 'Part-time',
+            contract: 'Contract',
+            internship: 'Internship',
+          };
+
+          const postedDate = j.published_at
+            ? `${formatDistanceToNow(new Date(j.published_at), { addSuffix: true })}`
+            : 'Recently';
+
+          // companies may be object or array
+          const companyName: string = Array.isArray(j.companies)
+            ? (j.companies[0]?.company_name ?? 'Company')
+            : (j.companies?.company_name ?? 'Company');
+
+          return {
+            id: j.id,
+            title: j.title,
+            company: companyName,
+            companyId: j.company_id,
+            location: j.location,
+            salary,
+            type: typeMap[j.job_type ?? ''] || j.job_type || 'Full-time',
+            postedDate,
+            description: j.description || '',
+            skills: Array.isArray(j.skills_required) ? j.skills_required : [],
+            featured: false,
+          } as Job;
+        });
+
+        if (mounted) setDbJobs(mapped);
+      } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : 'Failed to load jobs';
+        if (mounted) setDbError(message);
+        console.error('Failed to fetch jobs:', e);
+      } finally {
+        if (mounted) setLoadingDb(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
 
   // State for job alert panel
   const [showJobAlertPanel, setShowJobAlertPanel] = useState(false);
@@ -284,7 +396,7 @@ export function JobList({ onJobSelect: _onJobSelect }: JobListProps) {
 
   // Handle share job
   const handleShareJob = (jobId: string) => {
-    const job = mockJobs.find(j => j.id === jobId);
+    const job = combinedJobs.find(j => j.id === jobId);
     if (job) {
       const shareUrl = `${window.location.origin}/jobs/${jobId}/share`;
       if (navigator.share) {
@@ -305,7 +417,9 @@ export function JobList({ onJobSelect: _onJobSelect }: JobListProps) {
     }
   };
 
-  const filteredJobs = mockJobs.filter(job => {
+  const combinedJobs: Job[] = [...dbJobs, ...mockJobs];
+
+  const filteredJobs = combinedJobs.filter(job => {
     const matchesSearch = job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          job.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          job.skills.some(skill => skill.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -321,7 +435,10 @@ export function JobList({ onJobSelect: _onJobSelect }: JobListProps) {
   const sortedJobs = [...filteredJobs].sort((a, b) => {
     switch (sortBy) {
       case 'newest':
-        return new Date(b.postedDate).getTime() - new Date(a.postedDate).getTime();
+        // postedDate is a relative string for DB jobs; keep DB order by index and then mock by their postedDate
+        const idxA = combinedJobs.findIndex(j => j.id === a.id);
+        const idxB = combinedJobs.findIndex(j => j.id === b.id);
+        return idxA - idxB;
       case 'salary':
         return 0; // Simplified for demo
       case 'company':
@@ -351,14 +468,14 @@ export function JobList({ onJobSelect: _onJobSelect }: JobListProps) {
 
   // Handle job card click to show detail view
   const handleJobView = (_jobId?: string) => {
-    void _jobId;
+    if (_jobId) setSelectedJobId(_jobId);
     setAutoOpenApply(false);
     setShowJobDetail(true);
   };
 
   // Handle apply button click to show detail view with auto-open apply
   const handleJobApply = (_jobId?: string) => {
-    void _jobId;
+    if (_jobId) setSelectedJobId(_jobId);
     setAutoOpenApply(true);
     setShowJobDetail(true);
   };
@@ -402,12 +519,13 @@ export function JobList({ onJobSelect: _onJobSelect }: JobListProps) {
     setCompanyOpen(true);
   };
 
-  // If showing job detail, render JobDetail component
-  if (showJobDetail) {
+  // If showing job detail, render JobDetail component only when we have a jobId
+  if (showJobDetail && selectedJobId) {
     return (
       <JobDetail
         onBack={handleBackToJobs}
         autoOpenApply={autoOpenApply}
+        jobId={selectedJobId}
       />
     );
   }
@@ -429,6 +547,12 @@ export function JobList({ onJobSelect: _onJobSelect }: JobListProps) {
           <p className="text-muted-foreground mt-2">
             {filteredJobs.length} opportunities waiting for you • Page {currentPage} of {totalPages}
           </p>
+          {loadingDb && (
+            <p className="text-sm text-muted-foreground mt-1">Loading latest jobs…</p>
+          )}
+          {dbError && (
+            <p className="text-sm text-red-600 mt-1">{dbError}</p>
+          )}
         </motion.div>
 
         {/* Notification Prompt */}
@@ -682,7 +806,7 @@ export function JobList({ onJobSelect: _onJobSelect }: JobListProps) {
                     Recently Viewed
                   </h3>
                   <div className="space-y-3">
-                    {recentlyViewedJobs.map((job, index) => (
+                    {(combinedJobs.slice(0,3)).map((job, index) => (
                       <motion.div
                         key={job.id}
                         initial={{ opacity: 0, y: 10 }}

@@ -382,7 +382,7 @@ export async function saveSeekerProfile(profile: UIProfile): Promise<void> {
   }
 
   // Recompute completion and persist
-  const completion = await updateProfileCompletionByUserId(userId)
+  await updateProfileCompletionByUserId(userId)
 }
 
 async function getSeekerProfileIdByUserId(userId: string): Promise<string | null> {

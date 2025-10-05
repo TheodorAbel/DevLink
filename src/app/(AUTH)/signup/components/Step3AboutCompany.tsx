@@ -1,7 +1,7 @@
 import { EnhancedInput } from './EnhancedInput';
 import { FloatingTextarea } from './FloatingTextarea';
 import { FloatingSelect } from './FloatingSelect';
-import { Users, Calendar, Linkedin, Facebook } from 'lucide-react';
+import { Users, Linkedin, Facebook } from 'lucide-react';
 
 interface Step3Data {
   description: string;
@@ -89,7 +89,7 @@ const validateFacebook = (value: string) => {
 };
 
 export function Step3AboutCompany({ data, onChange }: Step3AboutCompanyProps) {
-  const updateField = (field: keyof Step3Data, value: any) => {
+  const updateField = (field: keyof Step3Data, value: Step3Data[keyof Step3Data]) => {
     onChange({
       ...data,
       [field]: value,

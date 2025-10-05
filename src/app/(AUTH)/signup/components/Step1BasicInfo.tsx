@@ -46,7 +46,7 @@ const validateWebsite = (value: string) => {
 };
 
 export function Step1BasicInfo({ data, onChange }: Step1BasicInfoProps) {
-  const updateField = (field: keyof Step1Data, value: any) => {
+  const updateField = (field: keyof Step1Data, value: Step1Data[keyof Step1Data]) => {
     onChange({
       ...data,
       [field]: value,
@@ -60,7 +60,7 @@ export function Step1BasicInfo({ data, onChange }: Step1BasicInfoProps) {
           <Building2 className="w-8 h-8 text-white" />
         </div>
         <h1 className="text-3xl font-semibold text-gray-900 mb-4">
-          Let's start with the basics
+          Let&apos;s start with the basics
         </h1>
         <p className="text-lg text-gray-600 max-w-2xl mx-auto">
           Tell us about your company so we can create the perfect profile for attracting top talent.

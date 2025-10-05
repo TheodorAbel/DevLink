@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { signUp } from "@/lib/auth";
 import { ROLES, Role } from "@/lib/roles";
@@ -17,7 +16,6 @@ import { RoleSelector, roleOptions } from "@/components/auth/RoleSelector";
 import Link from "next/link";
 
 export default function SignupPage() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");

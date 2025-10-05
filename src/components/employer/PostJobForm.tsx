@@ -15,7 +15,6 @@ import { Calendar } from "./ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { cn } from "../../lib/utils";
 import { supabase } from "@/lib/supabaseClient";
-import { useRouter } from "next/navigation";
 
 interface ScreeningQuestion {
   id: string;
@@ -60,7 +59,6 @@ export function PostJobForm({
   onPreview,
   initialData = {} 
 }: PostJobFormProps) {
-  const router = useRouter();
   const [formData, setFormData] = useState<JobFormData>({
     title: '',
     location: '',
@@ -260,12 +258,10 @@ export function PostJobForm({
         headers: { Authorization: `Bearer ${accessToken}` },
       });
       const out = await res.json().catch(() => ({}));
-      // eslint-disable-next-line no-console
       console.log('Bootstrap result:', res.status, out);
       companyId = out?.company_id || undefined;
       effectiveRole = (out?.role as string | undefined)?.toLowerCase();
     } catch (e) {
-      // eslint-disable-next-line no-console
       console.error('Bootstrap request failed:', e);
     }
 
@@ -285,7 +281,6 @@ export function PostJobForm({
       return;
     }
 
-    // eslint-disable-next-line no-console
     console.log('Publishing with company_id:', companyId);
 
     // Map UI fields to schema
@@ -308,7 +303,7 @@ export function PostJobForm({
     let salary_min: number | null = null;
     let salary_max: number | null = null;
     let salary_fixed: number | null = null;
-    let salary_currency: string | null = formData.currency || 'ETB';
+    const salary_currency: string | null = formData.currency || 'ETB';
     let custom_salary_message: string | null = null;
 
     if (formData.salaryType === 'range') {
@@ -331,7 +326,7 @@ export function PostJobForm({
       location: formData.location.trim(),
       job_type: jobTypeMap[formData.jobType] || formData.jobType,
       is_remote: !!formData.isRemote,
-      remote_policy: formData.isRemote ? 'hybrid' : null as any,
+      remote_policy: formData.isRemote ? 'hybrid' : null,
       salary_type,
       salary_min,
       salary_max,
@@ -357,9 +352,8 @@ export function PostJobForm({
 
     if (insertErr || !inserted?.id) {
       // Surface details for debugging
-      // eslint-disable-next-line no-console
       console.error('Publish job failed:', { insertErr });
-      if ((insertErr as any)?.message?.includes('RLS')) {
+      if (insertErr?.message && String(insertErr.message).includes('RLS')) {
         toast.error("Permission denied. Ensure your account is linked to a company.");
       } else {
         toast.error("Failed to publish job. Please try again.");
@@ -394,7 +388,6 @@ export function PostJobForm({
         .insert(rows);
 
       if (qErr) {
-        // eslint-disable-next-line no-console
         console.error('Failed to insert screening questions:', qErr);
         toast.warning("Job published, but adding screening questions failed");
       }

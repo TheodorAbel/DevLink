@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 
 import { motion } from 'framer-motion';
-import Link from 'next/link';
 
 import { Card, CardHeader, CardTitle, CardContent } from './ui/card';
 import { Button } from './ui/button';
@@ -18,6 +17,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { ApplicantCompanyProfileDrawer } from './ApplicantCompanyProfileDrawer';
+import { supabase } from '@/lib/supabaseClient';
 
 export interface Job {
   id: string;
@@ -87,8 +87,47 @@ export function JobCard({
 
   const openCompany = (e?: React.MouseEvent) => {
     e?.stopPropagation();
-    setCompanyData(buildMockCompany());
-    setCompanyOpen(true);
+    // If we have a companyId, fetch real company data; otherwise fallback to mock
+    const doOpen = async () => {
+      if (!job.companyId) {
+        setCompanyData(buildMockCompany());
+        setCompanyOpen(true);
+        return;
+      }
+      const { data, error } = await supabase
+        .from('companies')
+        .select('id, company_name, description, company_size, industry, founded_year, website_url, headquarters')
+        .eq('id', job.companyId)
+        .maybeSingle();
+      if (error || !data) {
+        setCompanyData(buildMockCompany());
+        setCompanyOpen(true);
+        return;
+      }
+      const company = {
+        id: data.id,
+        name: data.company_name || job.company,
+        logo: job.logo || '',
+        coverImage: '',
+        industry: data.industry || '—',
+        companySize: data.company_size || '—',
+        location: data.headquarters || job.location,
+        website: data.website_url || '#',
+        founded: data.founded_year ? String(data.founded_year) : '—',
+        about: data.description || '',
+        culture: '',
+        media: [],
+        leadership: [],
+        hiringProcess: [],
+        contact: { email: '', phone: '', address: data.headquarters || job.location },
+        openPositions: [
+          { id: job.id, title: job.title, type: job.type, location: job.location },
+        ],
+      } satisfies NonNullable<Parameters<typeof ApplicantCompanyProfileDrawer>[0]['company']>;
+      setCompanyData(company);
+      setCompanyOpen(true);
+    };
+    void doOpen();
   };
   const handleCardClick = () => {
     onView?.(job.id);

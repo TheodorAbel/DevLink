@@ -22,14 +22,14 @@ export async function POST(req: NextRequest) {
     const user = userRes.user;
 
     // Read users row via service role to bypass RLS
-    const { data: existing, error: readErr } = await supabaseAdmin
+    const { data: existing } = await supabaseAdmin
       .from("users")
       .select("id, email, name, role, company_id")
       .eq("id", user.id)
       .maybeSingle();
 
     let role = existing?.role as string | undefined;
-    let company_id = existing?.company_id as string | undefined;
+    const company_id = existing?.company_id as string | undefined;
 
     if (!existing) {
       // Upsert minimal users row using service role
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
           {
             id: user.id,
             email: user.email,
-            name: (user.user_metadata as any)?.name ?? "User",
+            name: (user.user_metadata as Record<string, unknown> | undefined)?.name as string ?? "User",
             role: fallbackRole,
           },
           { onConflict: "id" }
@@ -52,9 +52,9 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ ok: true, role: role || null, company_id: company_id || null });
-  } catch (e: any) {
-    // eslint-disable-next-line no-console
+  } catch (e: unknown) {
     console.error("[API] /api/user/bootstrap error:", e);
-    return NextResponse.json({ error: "Unexpected error", details: e?.message ?? String(e) }, { status: 500 });
+    const message = e instanceof Error ? e.message : String(e);
+    return NextResponse.json({ error: "Unexpected error", details: message }, { status: 500 });
   }
 }

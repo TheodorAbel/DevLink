@@ -81,7 +81,7 @@ export function PendingScreen() {
             className="text-gray-600 mb-8 leading-relaxed"
           >
             Thanks for submitting your company details! Our verification team is reviewing your profile. 
-            You'll be notified once approved and can start posting jobs.
+            You&apos;ll be notified once approved and can start posting jobs.
           </motion.p>
 
           {/* Timeline */}

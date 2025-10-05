@@ -1,3 +1,4 @@
+/* eslint-disable react/no-unescaped-entities */
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -9,7 +10,6 @@ import {
   Mail, 
   Edit, 
   ArrowLeft, 
-  Sparkles,
   FileCheck,
   Users,
   RefreshCw
@@ -17,21 +17,28 @@ import {
 
 type ReviewStatus = 'pending' | 'in-review' | 'action-required' | 'approved' | 'rejected';
 
+interface StatusConfig {
+  title: string;
+  subtitle: string;
+  statusText: string;
+  statusColor: string;
+  pillColor: string;
+  icon: React.ComponentType<{ className?: string }>;
+  progress: number;
+}
+
 interface ExtravagantWaitingPageProps {
   status?: ReviewStatus;
-  companyName?: string;
   onEdit?: () => void;
   onBack?: () => void;
 }
 
 export function ExtravagantWaitingPage({ 
   status = 'pending', 
-  companyName = 'Your Company',
   onEdit,
   onBack 
 }: ExtravagantWaitingPageProps) {
-  const [progress, setProgress] = useState(0);
-  const [estimatedTime, setEstimatedTime] = useState('1h 12m');
+  const estimatedTime = '1h 12m';
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -41,19 +48,9 @@ export function ExtravagantWaitingPage({
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  useEffect(() => {
-    // Simulate progress animation
-    if (status === 'in-review') {
-      const timer = setInterval(() => {
-        setProgress(prev => Math.min(prev + 1, 65));
-      }, 100);
-      return () => clearInterval(timer);
-    } else if (status === 'approved') {
-      setProgress(100);
-    }
-  }, [status]);
+  // Progress animation UI removed to simplify and avoid unused state
 
-  const getStatusConfig = () => {
+  const getStatusConfig = (): StatusConfig => {
     switch (status) {
       case 'pending':
         return {
@@ -118,17 +115,24 @@ export function ExtravagantWaitingPage({
     }
   };
 
-  const config = getStatusConfig();
+  const config: StatusConfig = getStatusConfig();
   const IconComponent = config.icon;
 
   if (isMobile) {
-    return <MobileLayout config={config} status={status} estimatedTime={estimatedTime} companyName={companyName} onEdit={onEdit} onBack={onBack} IconComponent={IconComponent} />;
+    return <MobileLayout config={config} status={status} estimatedTime={estimatedTime} onEdit={onEdit} onBack={onBack} IconComponent={IconComponent} />;
   }
 
-  return <DesktopLayout config={config} status={status} estimatedTime={estimatedTime} companyName={companyName} onEdit={onEdit} onBack={onBack} IconComponent={IconComponent} />;
+  return <DesktopLayout config={config} status={status} estimatedTime={estimatedTime} onEdit={onEdit} onBack={onBack} IconComponent={IconComponent} />;
 }
 
-function MobileLayout({ config, status, estimatedTime, companyName, onEdit, onBack, IconComponent }: any) {
+function MobileLayout({ config, status, estimatedTime, onEdit, onBack, IconComponent }: {
+  config: StatusConfig;
+  status: ReviewStatus;
+  estimatedTime: string;
+  onEdit?: () => void;
+  onBack?: () => void;
+  IconComponent: React.ComponentType<{ className?: string }>;
+}) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
       {/* Animated Background Blobs */}
@@ -175,7 +179,7 @@ function MobileLayout({ config, status, estimatedTime, companyName, onEdit, onBa
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
         >
-          <ThreeDCenterpiece status={status} size="mobile" />
+          <ThreeDCenterpiece size="mobile" />
         </motion.div>
 
         {/* Status Card */}
@@ -403,7 +407,14 @@ function MobileLayout({ config, status, estimatedTime, companyName, onEdit, onBa
   );
 }
 
-function DesktopLayout({ config, status, estimatedTime, companyName, onEdit, onBack, IconComponent }: any) {
+function DesktopLayout({ config, status, estimatedTime, onEdit, onBack, IconComponent }: {
+  config: StatusConfig;
+  status: ReviewStatus;
+  estimatedTime: string;
+  onEdit?: () => void;
+  onBack?: () => void;
+  IconComponent: React.ComponentType<{ className?: string }>;
+}) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
       {/* Animated Background Blobs */}
@@ -453,7 +464,7 @@ function DesktopLayout({ config, status, estimatedTime, companyName, onEdit, onB
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8 }}
             >
-              <ThreeDCenterpiece status={status} size="desktop" />
+              <ThreeDCenterpiece size="desktop" />
             </motion.div>
           </div>
 
@@ -639,7 +650,7 @@ function DesktopLayout({ config, status, estimatedTime, companyName, onEdit, onB
   );
 }
 
-function ThreeDCenterpiece({ status, size }: { status: ReviewStatus; size: 'mobile' | 'desktop' }) {
+function ThreeDCenterpiece({ size }: { size: 'mobile' | 'desktop' }) {
   const [isHovered, setIsHovered] = useState(false);
   const [showExplanation, setShowExplanation] = useState(false);
   const scale = size === 'mobile' ? 0.8 : 1.2;

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 import { motion } from 'framer-motion';
 import { Card, CardHeader, CardTitle, CardContent } from './ui/card';
@@ -17,133 +17,201 @@ import {
   ExternalLink
 } from 'lucide-react';
 
-import Link from 'next/link';
 import { AnimatedBackground } from './AnimatedBackground';
 import { toast } from 'sonner';
 
 import { ApplySheet } from './ApplySheet';
 import { CompanyProfileView } from './company/CompanyProfileView';
+import { supabase } from '@/lib/supabaseClient';
+import { formatDistanceToNow } from 'date-fns';
 
 interface JobDetailProps {
   onBack: () => void;
   autoOpenApply?: boolean;
+  jobId?: string;
 }
 
-// Mock job data
-const jobDetail = {
-  id: '1',
-  title: 'Senior Frontend Developer',
-  company: 'TechCorp',
-  companyId: '1',
-  location: 'San Francisco, CA',
-  salary: '$120,000 - $160,000',
-  type: 'Full-time',
-  postedDate: '2 days ago',
-  applicationDeadline: 'March 15, 2024',
-  applicants: 23,
-  description: `We are looking for an experienced Senior Frontend Developer to join our growing engineering team. You'll be responsible for building and maintaining user-facing applications that serve millions of users worldwide.
-
-In this role, you'll work closely with our design and product teams to create exceptional user experiences. You'll have the opportunity to mentor junior developers and contribute to architectural decisions that shape the future of our platform.`,
-  
-  responsibilities: [
-    'Develop and maintain high-quality React applications',
-    'Collaborate with designers to implement pixel-perfect UIs',
-    'Write clean, maintainable, and well-tested code',
-    'Mentor junior developers and conduct code reviews',
-    'Participate in architecture and technical design discussions',
-    'Optimize applications for maximum speed and scalability'
-  ],
-  
-  requirements: [
-    '5+ years of experience with React and TypeScript',
-    'Strong understanding of modern JavaScript (ES6+)',
-    'Experience with state management (Redux, Zustand, etc.)',
-    'Proficiency with modern CSS and styling frameworks',
-    'Experience with testing frameworks (Jest, React Testing Library)',
-    'Bachelor\'s degree in Computer Science or related field'
-  ],
-  
-  skills: ['React', 'TypeScript', 'Next.js', 'Tailwind CSS', 'GraphQL', 'Jest'],
-  benefits: [
-    'Competitive salary and equity package',
-    'Comprehensive health, dental, and vision insurance',
-    'Unlimited PTO and flexible working hours',
-    'Annual learning and development budget',
-    'Remote work options',
-    'Top-tier equipment and workspace setup'
-  ],
-  
-  companyInfo: {
-    name: 'TechCorp',
-    size: '500-1000 employees',
-    industry: 'Technology',
-    founded: '2015',
-    description: 'TechCorp is a leading technology company that builds innovative solutions for businesses worldwide. We\'re passionate about creating products that make a difference.',
-    website: 'https://techcorp.com'
-  }
+type DbJob = {
+  id: string;
+  title: string;
+  location: string | null;
+  job_type: string | null;
+  salary_type: string | null;
+  salary_min: number | null;
+  salary_max: number | null;
+  salary_fixed: number | null;
+  salary_currency: string | null;
+  custom_salary_message: string | null;
+  description: string | null;
+  requirements: string[] | null;
+  responsibilities: string[] | null;
+  skills_required: string[] | null;
+  application_deadline: string | null;
+  published_at: string | null;
+  company_id: string;
+  companies?: {
+    company_name: string | null;
+    description: string | null;
+    company_size: string | null;
+    industry: string | null;
+    founded_year: number | null;
+    website_url: string | null;
+    benefits: string[] | null;
+    headquarters: string | null;
+  } | null;
 };
 
-export function JobDetail({ onBack, autoOpenApply = false }: JobDetailProps) {
+export function JobDetail({ onBack, autoOpenApply = false, jobId }: JobDetailProps) {
   const [isApplied] = useState(false);
   const [applyOpen, setApplyOpen] = useState(autoOpenApply);
   const [showCompanyProfile, setShowCompanyProfile] = useState(false);
   const [companyData, setCompanyData] = useState<null | Parameters<typeof CompanyProfileView>[0]["company"]>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [dbJob, setDbJob] = useState<DbJob | null>(null);
   
-  // In a real app, you would fetch job data based on jobId
-  // For now, using mock data
-  const currentJob = jobDetail; // You could have a function to get job by ID
+  // Fetch the job + company by ID
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        if (!jobId) {
+          setError('Missing job id');
+          return;
+        }
+        const { data, error } = await supabase
+          .from('jobs')
+          .select(`
+            id, title, location, job_type, salary_type, salary_min, salary_max, salary_fixed, salary_currency, custom_salary_message,
+            description, requirements, responsibilities, skills_required, application_deadline, published_at, company_id,
+            companies:company_id ( company_name, description, company_size, industry, founded_year, website_url, benefits, headquarters )
+          `)
+          .eq('id', jobId)
+          .maybeSingle();
+        if (error) throw error;
+        if (mounted) setDbJob(data as unknown as DbJob);
+      } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : 'Failed to load job';
+        if (mounted) setError(message);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, [jobId]);
+
+  const mapped = useMemo(() => {
+    if (!dbJob) return null;
+    const typeMap: Record<string, string> = {
+      full_time: 'Full-time',
+      part_time: 'Part-time',
+      contract: 'Contract',
+      internship: 'Internship',
+    };
+    // Salary
+    let salary = 'Competitive';
+    if (dbJob.salary_type === 'range' && dbJob.salary_min && dbJob.salary_max) {
+      salary = `${dbJob.salary_currency || 'ETB'} ${dbJob.salary_min} - ${dbJob.salary_max}`;
+    } else if (dbJob.salary_type === 'fixed' && dbJob.salary_fixed) {
+      salary = `${dbJob.salary_currency || 'ETB'} ${dbJob.salary_fixed}`;
+    } else if (dbJob.custom_salary_message) {
+      salary = dbJob.custom_salary_message;
+    }
+    const postedDate = dbJob.published_at
+      ? formatDistanceToNow(new Date(dbJob.published_at), { addSuffix: true })
+      : 'Recently';
+
+    return {
+      id: dbJob.id,
+      title: dbJob.title,
+      company: dbJob.companies?.company_name || 'Company',
+      companyId: dbJob.company_id,
+      location: dbJob.location || '—',
+      salary,
+      type: typeMap[dbJob.job_type || ''] || dbJob.job_type || 'Full-time',
+      postedDate,
+      applicationDeadline: dbJob.application_deadline ? new Date(dbJob.application_deadline).toDateString() : '—',
+      applicants: 0,
+      description: dbJob.description || '',
+      responsibilities: dbJob.responsibilities || [],
+      requirements: dbJob.requirements || [],
+      skills: dbJob.skills_required || [],
+      benefits: dbJob.companies?.benefits || [],
+      companyInfo: {
+        name: dbJob.companies?.company_name || 'Company',
+        size: dbJob.companies?.company_size || '—',
+        industry: dbJob.companies?.industry || '—',
+        founded: dbJob.companies?.founded_year ? String(dbJob.companies.founded_year) : '—',
+        description: dbJob.companies?.description || '',
+        website: dbJob.companies?.website_url || '#',
+        headquarters: dbJob.companies?.headquarters || undefined,
+      },
+    };
+  }, [dbJob]);
+
+  const currentJob = mapped || {
+    id: '',
+    title: '',
+    company: 'Company',
+    companyId: '',
+    location: '—',
+    salary: '—',
+    type: '—',
+    postedDate: '—',
+    applicationDeadline: '—',
+    applicants: 0,
+    description: '',
+    responsibilities: [],
+    requirements: [],
+    skills: [],
+    benefits: [],
+    companyInfo: {
+      name: 'Company',
+      size: '—',
+      industry: '—',
+      founded: '—',
+      description: '',
+      website: '#',
+      headquarters: undefined as string | undefined,
+    },
+  };
 
   const handleApply = () => {
     // Open the responsive Apply sheet instead of instant-apply
     setApplyOpen(true);
   };
 
-  const buildMockCompany = (): NonNullable<Parameters<typeof CompanyProfileView>[0]["company"]> => ({
-    id: jobDetail.companyId,
-    name: jobDetail.company,
+  const buildCompanyFromDb = (): NonNullable<Parameters<typeof CompanyProfileView>[0]["company"]> => ({
+    id: currentJob.companyId,
+    name: currentJob.company,
     logo: '',
-    coverImage: 'https://images.unsplash.com/photo-1496307042754-b4aa456c4a2d?q=80&w=1600&auto=format&fit=crop',
-    industry: 'Technology',
-    companySize: '51-200+',
-    location: jobDetail.location,
-    website: jobDetail.companyInfo.website,
-    founded: jobDetail.companyInfo.founded,
-    about: jobDetail.companyInfo.description,
-    tagline: 'Building products that empower people and businesses',
+    coverImage: '',
+    industry: currentJob.companyInfo.industry || '—',
+    companySize: currentJob.companyInfo.size || '—',
+    location: currentJob.companyInfo.headquarters || currentJob.location,
+    website: currentJob.companyInfo.website,
+    founded: currentJob.companyInfo.founded,
+    about: currentJob.companyInfo.description,
+    tagline: '',
     verified: true,
-    remotePolicy: 'Hybrid',
-    social: {
-      linkedin: 'https://linkedin.com/company/techcorp',
-      twitter: 'https://twitter.com/techcorp',
-      github: 'https://github.com/techcorp',
-      youtube: 'https://youtube.com/@techcorp'
-    },
-    culture: 'Inclusive, collaborative, and focused on impact.',
-    cultureItems: [
-      { title: 'Innovation', description: 'We encourage creative thinking and experimentation to drive breakthrough solutions.' },
-      { title: 'Collaboration', description: 'We believe in the power of teamwork and open communication across all levels.' },
-      { title: 'Diversity & Inclusion', description: 'We celebrate differences and believe diverse perspectives make us stronger.' },
-      { title: 'Work-Life Balance', description: 'We support our team in maintaining a healthy balance between work and personal life.' }
-    ],
-    media: [
-      { type: 'image', url: 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?q=80&w=1600&auto=format&fit=crop', title: 'Team' },
-      { type: 'video', url: 'https://sample-videos.com/video321/mp4/720/big_buck_bunny_720p_1mb.mp4', title: 'Intro' },
-      { type: 'image', url: 'https://images.unsplash.com/photo-1529333166437-7750a6dd5a70?q=80&w=1600&auto=format&fit=crop', title: 'Workspace' }
-    ],
-    leadership: [
-      { name: 'Jordan Lee', role: 'CEO' },
-      { name: 'Chris Morgan', role: 'CTO' }
-    ],
-    hiringProcess: ['Application Review', 'Technical Interview', 'Culture Fit', 'Offer'],
-    contact: { email: 'hello@techcorp.com', phone: '+1 (555) 987-6543', address: jobDetail.location },
+    remotePolicy: '',
+    social: {},
+    culture: '',
+    cultureItems: [],
+    media: [],
+    leadership: [],
+    hiringProcess: [],
+    contact: { email: '', phone: '', address: currentJob.location },
     openPositions: [
-      { id: jobDetail.id, title: jobDetail.title, type: jobDetail.type, location: jobDetail.location }
+      { id: currentJob.id, title: currentJob.title, type: currentJob.type, location: currentJob.location }
     ]
   });
 
   const openCompany = (e?: React.MouseEvent) => {
     e?.stopPropagation();
-    setCompanyData(buildMockCompany());
+    setCompanyData(buildCompanyFromDb());
     setShowCompanyProfile(true);
   };
 
@@ -154,6 +222,30 @@ export function JobDetail({ onBack, autoOpenApply = false }: JobDetailProps) {
     navigator.clipboard.writeText(fullDescription);
     toast.success('Job description copied to clipboard!');
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen relative">
+        <AnimatedBackground variant="particles" />
+        <div className="relative z-10 p-6 max-w-4xl mx-auto">
+          <div className="h-10 w-40 bg-gray-100 animate-pulse rounded mb-4" />
+          <div className="h-32 w-full bg-gray-100 animate-pulse rounded" />
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen relative">
+        <AnimatedBackground variant="particles" />
+        <div className="relative z-10 p-6 max-w-4xl mx-auto">
+          <Button variant="ghost" onClick={onBack} className="mb-4">Back</Button>
+          <Card><CardContent className="p-6 text-red-600">{error}</CardContent></Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen relative">
