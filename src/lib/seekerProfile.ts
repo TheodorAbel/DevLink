@@ -42,20 +42,26 @@ export async function uploadSeekerResume(file: File): Promise<UploadedResumeMeta
 
   const userId = await getUserId()
 
-  // Enforce policy naming: split_part(name, '_', 2) = auth.uid()
-  // Pattern: <timestamp>_<userId>_<sanitizedName>.pdf
-  const ts = Date.now()
-  const original = sanitizeFilename(file.name.endsWith('.pdf') ? file.name : `${file.name}.pdf`)
-  const objectName = `${ts}_${userId}_${original}`
+  // Upload via server API (service role) to avoid storage RLS recursion
+  const { data: sessionData } = await supabase.auth.getSession()
+  const token = sessionData.session?.access_token
+  if (!token) throw new Error('Not authenticated')
 
-  const { error: uploadErr } = await supabase.storage
-    .from('resumes')
-    .upload(objectName, file, {
-      cacheControl: '3600',
-      upsert: true,
-      contentType: 'application/pdf',
-    })
-  if (uploadErr) throw new Error(`Failed to upload to storage: ${uploadErr.message || 'unknown error'}`)
+  const form = new FormData()
+  form.append('file', file)
+  const res = await fetch('/api/resumes/upload', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: form,
+  })
+  if (!res.ok) {
+    let msg = 'unknown error'
+    try { const j = await res.json(); msg = j.error || msg } catch {}
+    throw new Error(`Failed to upload to storage: ${msg}`)
+  }
+  const up = await res.json() as { objectName: string; originalName: string; size: number }
+  const objectName = up.objectName
+  const original = up.originalName
 
   // Ensure we have a seeker_profile row id for FK
   const { data: profileRow, error: profErr } = await supabase

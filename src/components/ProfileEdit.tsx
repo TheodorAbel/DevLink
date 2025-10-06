@@ -32,6 +32,7 @@ import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 // Note: Select components are not used in this file
 import { fetchSeekerProfile, saveSeekerProfile, uploadSeekerResume, fetchPrimaryResume, createResumeSignedUrl, fetchProfileCompletion } from '@/lib/seekerProfile';
+import { supabase } from '@/lib/supabaseClient';
 
 interface ProfileEditProps {
   onBack?: () => void;
@@ -298,13 +299,17 @@ export function ProfileEdit({ onBack: _onBack, initialTab = 'personal' }: Profil
     (async () => {
       try {
         setLoading(true);
+        // Get auth user email to use as fallback
+        const { data: authData } = await supabase.auth.getUser();
+        const authEmail = authData?.user?.email ?? '';
+
         const data = await fetchSeekerProfile();
         if (!mounted) return;
         setProfile({
           personalInfo: {
             firstName: data.personalInfo.firstName,
             lastName: data.personalInfo.lastName,
-            email: data.personalInfo.email,
+            email: data.personalInfo.email || authEmail,
             phone: data.personalInfo.phone,
             location: data.personalInfo.location,
             bio: data.personalInfo.bio,
@@ -525,10 +530,9 @@ export function ProfileEdit({ onBack: _onBack, initialTab = 'personal' }: Profil
                         id="email"
                         type="email"
                         value={profile.personalInfo.email}
-                        onChange={(e) => setProfile(prev => ({
-                          ...prev,
-                          personalInfo: { ...prev.personalInfo, email: e.target.value }
-                        }))}
+                        disabled
+                        readOnly
+                        className="bg-muted/50 cursor-not-allowed"
                       />
                     </div>
                     <div className="space-y-2">

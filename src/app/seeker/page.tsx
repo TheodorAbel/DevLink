@@ -71,7 +71,7 @@ function SeekerPageInner() {
         return <SavedJobs onJobSelect={(jobId) => console.log('Saved job selected:', jobId)} />;
       case 'applications':
         return selectedApplicationId ? (
-          <ApplicationDetail onBack={() => setSelectedApplicationId(null)} />
+          <ApplicationDetail onBack={() => setSelectedApplicationId(null)} jobId={selectedApplicationId} />
         ) : (
           <SeekerApplications onOpenApplication={(id) => setSelectedApplicationId(id)} />
         );

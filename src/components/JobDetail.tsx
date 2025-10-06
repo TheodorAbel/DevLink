@@ -62,7 +62,7 @@ type DbJob = {
 };
 
 export function JobDetail({ onBack, autoOpenApply = false, jobId }: JobDetailProps) {
-  const [isApplied] = useState(false);
+  const [isApplied, setIsApplied] = useState(false);
   const [applyOpen, setApplyOpen] = useState(autoOpenApply);
   const [showCompanyProfile, setShowCompanyProfile] = useState(false);
   const [companyData, setCompanyData] = useState<null | Parameters<typeof CompanyProfileView>[0]["company"]>(null);
@@ -100,6 +100,28 @@ export function JobDetail({ onBack, autoOpenApply = false, jobId }: JobDetailPro
       }
     })();
     return () => { mounted = false; };
+  }, [jobId]);
+
+  // Check if user already applied for this job to reflect button state
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        if (!jobId) return;
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData.session?.access_token;
+        if (!token) return;
+        const res = await fetch(`/api/applications?jobId=${encodeURIComponent(jobId)}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!mounted) return;
+        if (res.ok) {
+          const j = await res.json();
+          if (j && j.status === 'applied') setIsApplied(true);
+        }
+      } catch {}
+    })();
+    return () => { mounted = false };
   }, [jobId]);
 
   const mapped = useMemo(() => {
@@ -352,7 +374,8 @@ export function JobDetail({ onBack, autoOpenApply = false, jobId }: JobDetailPro
           onOpenChange={(o) => setApplyOpen(o)}
           jobTitle={currentJob.title}
           company={currentJob.company}
-          profileResumeName={'Sarah_Johnson_Resume.pdf'}
+          jobId={currentJob.id}
+          onApplied={() => setIsApplied(true)}
           screeningQuestions={[
             { id: 'q1', text: 'How many years of React experience do you have?', type: 'short-answer', required: true },
             { id: 'q2', text: 'Are you comfortable with TypeScript?', type: 'yes-no', required: true },

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
@@ -8,9 +8,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { AnimatedBackground } from './AnimatedBackground';
 import { FileText, Search, Filter, Calendar, Building2, ChevronRight } from 'lucide-react';
+import { supabase } from '@/lib/supabaseClient';
 
 export type ApplicationItem = {
   id: string;
+  jobId: string;
   jobTitle: string;
   company: string;
   location: string;
@@ -22,12 +24,7 @@ interface SeekerApplicationsProps {
   onOpenApplication: (applicationId: string) => void;
 }
 
-const MOCK_APPLICATIONS: ApplicationItem[] = [
-  { id: '1', jobTitle: 'Senior Frontend Developer', company: 'TechCorp', location: 'San Francisco, CA', appliedDate: '2024-01-15', status: 'interview' },
-  { id: '2', jobTitle: 'UX Designer', company: 'DesignStudio', location: 'Remote', appliedDate: '2024-01-18', status: 'pending' },
-  { id: '3', jobTitle: 'Product Manager', company: 'StartupXYZ', location: 'New York, NY', appliedDate: '2024-01-15', status: 'rejected' },
-  { id: '4', jobTitle: 'Data Scientist', company: 'DataCorp', location: 'Austin, TX', appliedDate: '2024-01-12', status: 'applied' },
-];
+type RawApplication = { id: string; job_id: string; status: ApplicationItem['status']; created_at: string };
 
 function statusBadge(status: ApplicationItem['status']) {
   switch (status) {
@@ -48,15 +45,57 @@ export function SeekerApplications({ onOpenApplication }: SeekerApplicationsProp
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState<string>('all');
   const [tab, setTab] = useState<'list' | 'board'>('list');
+  const [items, setItems] = useState<ApplicationItem[]>([]);
+
+  // Load user's applications and join minimal job info
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData.session?.access_token;
+        if (!token) { setItems([]); return; }
+        const res = await fetch('/api/applications', { headers: { Authorization: `Bearer ${token}` } });
+        if (!mounted) return;
+        if (!res.ok) { setItems([]); return; }
+        const j = await res.json();
+        const list: RawApplication[] = Array.isArray(j.applications) ? j.applications : [];
+        if (!list.length) { setItems([]); return; }
+        const jobIds = list.map(a => a.job_id);
+        const { data: jobs } = await supabase
+          .from('jobs')
+          .select('id, title, location, companies:company_id ( company_name )')
+          .in('id', jobIds);
+        const byId = new Map((jobs || []).map(j => [j.id, j] as const));
+        const now = new Date();
+        const mapped: ApplicationItem[] = list.map((a) => {
+          const job = byId.get(a.job_id) as any;
+          return {
+            id: a.id,
+            jobId: a.job_id,
+            jobTitle: job?.title || 'Job',
+            company: (job?.companies as any)?.company_name || 'Company',
+            location: job?.location || '—',
+            appliedDate: a.created_at || now.toISOString(),
+            status: a.status || 'pending',
+          } as ApplicationItem;
+        });
+        setItems(mapped);
+      } catch {
+        if (mounted) setItems([]);
+      }
+    })();
+    return () => { mounted = false };
+  }, []);
 
   const filtered = useMemo(() => {
-    return MOCK_APPLICATIONS.filter((a) => {
+    return items.filter((a) => {
       const text = `${a.jobTitle} ${a.company} ${a.location}`.toLowerCase();
       const matchesQ = text.includes(query.toLowerCase());
       const matchesS = status === 'all' || a.status === (status as ApplicationItem['status']);
       return matchesQ && matchesS;
     });
-  }, [query, status]);
+  }, [items, query, status]);
 
   return (
     <div className="min-h-screen relative">
@@ -103,7 +142,7 @@ export function SeekerApplications({ onOpenApplication }: SeekerApplicationsProp
               <AnimatePresence>
                 {filtered.map((app, i) => (
                   <motion.div key={app.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}>
-                    <Card className="relative overflow-hidden hover:shadow-lg transition cursor-pointer" onClick={() => onOpenApplication(app.id)}>
+                    <Card className="relative overflow-hidden hover:shadow-lg transition cursor-pointer" onClick={() => onOpenApplication(app.jobId)}>
                       <div className="absolute inset-0 bg-gradient-to-br from-blue-50/20 to-purple-50/10" />
                       <CardContent className="relative p-4 flex items-center justify-between">
                         <div className="flex items-center gap-4">
@@ -144,7 +183,7 @@ export function SeekerApplications({ onOpenApplication }: SeekerApplicationsProp
                   </CardHeader>
                   <CardContent className="space-y-3">
                     {filtered.filter(a => a.status === col).map(a => (
-                      <Button key={a.id} variant="outline" className="w-full justify-between" onClick={() => onOpenApplication(a.id)}>
+                      <Button key={a.id} variant="outline" className="w-full justify-between" onClick={() => onOpenApplication(a.jobId)}>
                         <span className="truncate text-left">{a.jobTitle}</span>
                         <FileText className="h-4 w-4" />
                       </Button>

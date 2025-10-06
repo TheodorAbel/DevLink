@@ -69,18 +69,9 @@ export default function VerifyEmailPage() {
       let dbRole = publicUser?.role as string | undefined;
       const metaRole = (user.user_metadata?.role as string | undefined)?.toLowerCase();
 
-      if (!dbRole) {
-        // Attempt to upsert a minimal users row from metadata so subsequent guards work
-        const fallbackRole = metaRole ?? ROLES.SEEKER;
-        console.log("ℹ️ Upserting users row with fallback role:", fallbackRole);
-        const { error: upsertErr } = await supabase
-          .from("users")
-          .upsert({ id: user.id, email: user.email, name: user.user_metadata?.name ?? "User", role: fallbackRole }, { onConflict: "id" });
-        if (upsertErr) {
-          console.error("❌ Upsert users failed:", upsertErr);
-        } else {
-          dbRole = fallbackRole;
-        }
+      // If role row isn't present yet (sync may still be running), fall back to metadata role
+      if (!dbRole && metaRole) {
+        dbRole = metaRole;
       }
 
       const effectiveRole = dbRole ?? metaRole ?? null;

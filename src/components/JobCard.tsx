@@ -42,6 +42,7 @@ interface JobCardProps {
   onShare?: (jobId: string) => void;
   onView?: (jobId: string) => void;
   isSaved?: boolean;
+  isApplied?: boolean;
   className?: string;
 }
 
@@ -53,9 +54,27 @@ export function JobCard({
   onShare,
   onView,
   isSaved = false,
+  isApplied: isAppliedProp = false,
   className = ''
 }: JobCardProps) {
   const [companyOpen, setCompanyOpen] = useState(false);
+  const [applied, setApplied] = useState<boolean>(isAppliedProp);
+
+  // Listen for a global event dispatched when an application succeeds
+  React.useEffect(() => {
+    setApplied(isAppliedProp);
+  }, [isAppliedProp]);
+
+  React.useEffect(() => {
+    const handler = (e: Event) => {
+      try {
+        const detail = (e as CustomEvent<{ jobId?: string }>).detail;
+        if (detail?.jobId === job.id) setApplied(true);
+      } catch {}
+    };
+    window.addEventListener('application:applied', handler as EventListener);
+    return () => window.removeEventListener('application:applied', handler as EventListener);
+  }, [job.id]);
   const [companyData, setCompanyData] = useState<null | Parameters<typeof ApplicantCompanyProfileDrawer>[0]["company"]>(null);
 
   const buildMockCompany = (): NonNullable<Parameters<typeof ApplicantCompanyProfileDrawer>[0]["company"]> => ({
@@ -212,13 +231,13 @@ export function JobCard({
       className={className}
     >
       <Card className="cursor-pointer relative overflow-hidden group border-2 border-transparent hover:border-blue-200/50 transition-all duration-300">
-        {job.featured && (
+        {(job.featured || applied) && (
           <motion.div
             initial={{ x: 100 }}
             animate={{ x: 0 }}
-            className="absolute top-0 right-0 bg-gradient-to-r from-yellow-400 to-orange-400 text-white text-xs px-3 py-1 rounded-bl-lg shadow-lg"
+            className="absolute top-0 right-0 text-white text-xs px-3 py-1 rounded-bl-lg shadow-lg"
           >
-            Featured
+            {applied ? 'Applied' : 'Featured'}
           </motion.div>
         )}
         
@@ -351,9 +370,9 @@ export function JobCard({
                   e.stopPropagation();
                   onApply?.(job.id);
                 }}
-                className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 w-full md:w-auto min-h-11"
+                className={`${applied ? 'bg-green-600 hover:bg-green-700' : 'bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600'} w-full md:w-auto min-h-11 text-white`}
               >
-                Apply Now
+                {applied ? 'Edit Application' : 'Apply Now'}
               </Button>
             </div>
           </div>
