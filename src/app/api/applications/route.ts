@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabaseServer'
+import type { PostgrestError } from '@supabase/supabase-js'
 
 // POST /api/applications
 // Body: {
@@ -218,7 +219,7 @@ export async function POST(req: NextRequest) {
       .single()
 
     if (appErr) {
-      if ((appErr as any)?.code === '23505' /* unique_violation */) {
+      if ((appErr as PostgrestError)?.code === '23505' /* unique_violation */) {
         return NextResponse.json({ error: 'You have already applied for this job' }, { status: 409 })
       }
       return NextResponse.json({ error: 'Failed to create application' }, { status: 500 })
@@ -273,7 +274,7 @@ export async function POST(req: NextRequest) {
     } catch {}
 
     return NextResponse.json({ id: applicationId }, { status: 201 })
-  } catch (e) {
+  } catch {
     return NextResponse.json({ error: 'Unexpected error' }, { status: 500 })
   }
 }

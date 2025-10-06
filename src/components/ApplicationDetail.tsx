@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardHeader, CardTitle, CardContent } from './ui/card';
 import { Button } from './ui/button';
@@ -10,18 +10,14 @@ import {
   Calendar,
   Clock,
   Building2,
-  Download,
-  Eye,
   MessageSquare,
   CheckCircle,
   FileText,
-  User,
-  ExternalLink,
-  CalendarPlus
+  User
 } from 'lucide-react';
 import { AnimatedBackground } from './AnimatedBackground';
 import { supabase } from '@/lib/supabaseClient';
-import { Avatar, AvatarFallback } from './ui/avatar';
+// (avatars not used in this component)
 import { toast } from 'sonner';
 
 interface ApplicationDetailProps {
@@ -47,7 +43,6 @@ type LoadedJob = {
 }
 
 export function ApplicationDetail({ onBack, jobId, showMessages = false }: ApplicationDetailProps) {
-  const [showCoverLetter, setShowCoverLetter] = useState(false);
   const [app, setApp] = useState<LoadedApp | null>(null);
   const [job, setJob] = useState<LoadedJob | null>(null);
   const [loading, setLoading] = useState(true);
@@ -91,7 +86,7 @@ export function ApplicationDetail({ onBack, jobId, showMessages = false }: Appli
           const typeMap: Record<string, string> = { full_time: 'Full-time', part_time: 'Part-time', contract: 'Contract', internship: 'Internship' };
           setJob({
             title: jobRow?.title || 'Job',
-            company: (jobRow as any)?.companies?.company_name || 'Company',
+            company: (jobRow && typeof jobRow === 'object' && 'companies' in jobRow && (jobRow as { companies?: { company_name?: string } | null }).companies?.company_name) || 'Company',
             location: jobRow?.location || '—',
             salary,
             type: typeMap[jobRow?.job_type || ''] || jobRow?.job_type || 'Full-time',
@@ -120,18 +115,7 @@ export function ApplicationDetail({ onBack, jobId, showMessages = false }: Appli
     return <Clock className="w-6 h-6" />;
   };
 
-  const handleDownloadResume = () => {
-    toast.success('Resume download started');
-    // Simulate download
-  };
-
-  const handleScheduleInterview = () => {
-    toast.success('No interview link available');
-  };
-
-  const handleAddToCalendar = () => {
-    toast.success('No interview scheduled');
-  };
+  // Quick action handlers removed (unused)
 
   if (loading) {
     return (

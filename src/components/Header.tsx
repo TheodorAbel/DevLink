@@ -6,6 +6,7 @@ import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Bell, User, Briefcase, Bookmark, Clock, ArrowRight, Settings } from 'lucide-react';
 import { mockNotifications, getRelativeTime } from '@/data/mockNotifications';
+import { supabase } from '@/lib/supabaseClient';
 
 export function Header() {
   const [showNotifications, setShowNotifications] = useState(false);
@@ -13,6 +14,8 @@ export function Header() {
   const unreadCount = mockNotifications.filter(n => n.status === 'unread').length;
   const notificationRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const [userName, setUserName] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -27,6 +30,58 @@ export function Header() {
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Load authenticated user's name and email
+  useEffect(() => {
+    let isMounted = true;
+
+    const applyFromAuth = (u: any | null) => {
+      if (!isMounted) return;
+      const email = u?.email ?? null;
+      const metaName = u?.user_metadata?.name as string | undefined;
+      const fallbackName = email ? email.split('@')[0] : null;
+      setUserEmail(email);
+      setUserName(metaName || fallbackName);
+    };
+
+    const hydrateFromProfile = async (uid: string) => {
+      try {
+        const { data: profile } = await supabase
+          .from('users')
+          .select('name, email')
+          .eq('id', uid)
+          .single();
+        if (!isMounted) return;
+        if (profile) {
+          if (profile.email) setUserEmail(profile.email);
+          if (profile.name) setUserName(profile.name);
+        }
+      } catch {}
+    };
+
+    const init = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        applyFromAuth(user);
+        hydrateFromProfile(user.id);
+      }
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        const u = session?.user ?? null;
+        applyFromAuth(u);
+        if (u?.id) hydrateFromProfile(u.id);
+      });
+      return () => subscription?.unsubscribe();
+    };
+
+    const cleanupPromise = init();
+    return () => {
+      isMounted = false;
+      // Ensure subscription cleanup
+      cleanupPromise.then((cleanup) => {
+        try { (cleanup as any)?.(); } catch {}
+      });
+    };
   }, []);
 
   return (
@@ -154,14 +209,14 @@ export function Header() {
                 <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
                   <User className="h-4 w-4 text-white" />
                 </div>
-                <span className="hidden sm:block text-sm font-medium">John Doe</span>
+                <span className="hidden sm:block text-sm font-medium">{userName ?? '...'}</span>
               </Button>
 
               {showUserMenu && (
                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
                   <div className="px-4 py-2 border-b border-gray-100">
-                    <p className="text-sm font-medium text-gray-900">John Doe</p>
-                    <p className="text-xs text-gray-600">john.doe@example.com</p>
+                    <p className="text-sm font-medium text-gray-900">{userName ?? '...'}</p>
+                    <p className="text-xs text-gray-600">{userEmail ?? ''}</p>
                   </div>
                   <Link href="/notifications" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
                     <Bell className="h-4 w-4 mr-3" />

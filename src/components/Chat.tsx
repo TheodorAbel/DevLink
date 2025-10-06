@@ -41,7 +41,7 @@ export function Chat({ title = "Messages", participantId, jobId, applicationId, 
       setMessages(msgs);
       // Auto scroll on refresh
       setTimeout(scrollToBottom, 0);
-    } catch (e) {
+    } catch {
       // ignore transient
     }
   }, [conversationId, scrollToBottom]);
@@ -52,8 +52,8 @@ export function Chat({ title = "Messages", participantId, jobId, applicationId, 
       .then((id) => {
         setConversationId(id);
       })
-      .catch((e) => {
-        toast.error(e instanceof Error ? e.message : "Failed to open conversation");
+      .catch((err) => {
+        toast.error(err instanceof Error ? err.message : "Failed to open conversation");
       })
       .finally(() => setLoading(false));
   }, [participantId, jobId, applicationId]);
@@ -63,7 +63,9 @@ export function Chat({ title = "Messages", participantId, jobId, applicationId, 
     // initial fetch
     refresh();
     // poll
-    pollRef.current && clearInterval(pollRef.current);
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+    }
     pollRef.current = window.setInterval(() => {
       refresh();
     }, pollMs) as unknown as number;

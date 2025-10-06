@@ -7,12 +7,21 @@ async function getAuthHeader() {
   return { Authorization: `Bearer ${token}` }
 }
 
-export async function getConversations(): Promise<any[]> {
+export type ConversationBrief = {
+  id: string
+  participant_1_id: string
+  participant_2_id: string
+  job_id: string | null
+  application_id: string | null
+  last_message_at: string | null
+}
+
+export async function getConversations(): Promise<ConversationBrief[]> {
   const headers = await getAuthHeader()
   const res = await fetch('/api/conversations', { headers })
   if (!res.ok) throw new Error('Failed to load conversations')
   const json = await res.json()
-  return json.conversations || []
+  return (json.conversations || []) as ConversationBrief[]
 }
 
 export async function ensureConversation(args: { participantId: string; jobId?: string; applicationId?: string }): Promise<string> {
@@ -27,12 +36,21 @@ export async function ensureConversation(args: { participantId: string; jobId?: 
   return json.id as string
 }
 
-export async function getMessages(conversationId: string): Promise<any[]> {
+export type MessageRow = {
+  id: string
+  conversation_id: string
+  sender_user_id: string
+  content: string
+  created_at: string
+  read_by_recipient: boolean | null
+}
+
+export async function getMessages(conversationId: string): Promise<MessageRow[]> {
   const headers = await getAuthHeader()
   const res = await fetch(`/api/messages/${conversationId}`, { headers })
   if (!res.ok) throw new Error('Failed to load messages')
   const json = await res.json()
-  return json.messages || []
+  return (json.messages || []) as MessageRow[]
 }
 
 export async function sendMessage(conversationId: string, content: string): Promise<{ id: string; created_at: string }> {

@@ -66,15 +66,16 @@ export function SeekerApplications({ onOpenApplication }: SeekerApplicationsProp
           .from('jobs')
           .select('id, title, location, companies:company_id ( company_name )')
           .in('id', jobIds);
-        const byId = new Map((jobs || []).map(j => [j.id, j] as const));
+        type JobRow = { id: string; title?: string | null; location?: string | null; companies?: { company_name?: string | null } | null }
+        const byId = new Map((jobs || []).map(j => [j.id as string, j as JobRow] as const));
         const now = new Date();
         const mapped: ApplicationItem[] = list.map((a) => {
-          const job = byId.get(a.job_id) as any;
+          const job = byId.get(a.job_id) as JobRow | undefined;
           return {
             id: a.id,
             jobId: a.job_id,
             jobTitle: job?.title || 'Job',
-            company: (job?.companies as any)?.company_name || 'Company',
+            company: job?.companies?.company_name || 'Company',
             location: job?.location || '—',
             appliedDate: a.created_at || now.toISOString(),
             status: a.status || 'pending',

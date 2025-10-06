@@ -49,18 +49,16 @@ export type ApplySheetProps = {
   company: string
   jobId: string
   profileResumeName?: string // optional fallback label; will be overridden by fetched primary resume
-  screeningQuestions?: ScreeningQuestion[] // deprecated: real questions are fetched from API using jobId
   onApplied?: () => void
 }
 
-export function ApplySheet({ open, onOpenChange, jobTitle, company, jobId, profileResumeName = 'My_Resume.pdf', screeningQuestions = [], onApplied }: ApplySheetProps) {
+export function ApplySheet({ open, onOpenChange, jobTitle, company, jobId, profileResumeName = 'My_Resume.pdf', onApplied }: ApplySheetProps) {
   const isMobile = useIsMobile()
   const [step, setStep] = React.useState(0)
   const [submitting, setSubmitting] = React.useState(false)
   const [primaryResumeName, setPrimaryResumeName] = React.useState<string | null>(null)
   const [hasPrimaryResume, setHasPrimaryResume] = React.useState<boolean>(false)
   const [questions, setQuestions] = React.useState<ScreeningQuestion[]>([])
-  const [loadingQuestions, setLoadingQuestions] = React.useState<boolean>(false)
 
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<z.infer<typeof schema>>({
     resolver: zodResolver(schema),
@@ -121,7 +119,6 @@ export function ApplySheet({ open, onOpenChange, jobTitle, company, jobId, profi
     ;(async () => {
       if (!open || !jobId) return
       try {
-        setLoadingQuestions(true)
         const { data: sessionData } = await supabase.auth.getSession()
         const token = sessionData.session?.access_token
         const res = await fetch(`/api/jobs/${jobId}/questions`, {
@@ -160,7 +157,7 @@ export function ApplySheet({ open, onOpenChange, jobTitle, company, jobId, profi
       } catch {
         if (mounted) setQuestions([])
       } finally {
-        if (mounted) setLoadingQuestions(false)
+        // no-op
       }
     })()
     return () => { mounted = false }

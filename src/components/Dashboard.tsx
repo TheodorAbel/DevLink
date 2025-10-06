@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ProfileProgress } from './ProfileProgress';
@@ -113,6 +115,8 @@ export function Dashboard({ onPageChange }: DashboardProps) {
   const [steps, setSteps] = useState<{ basic: boolean; experience: boolean; resume: boolean; contact: boolean }>({ basic: false, experience: false, resume: false, contact: false });
   const [dbRecentJobs, setDbRecentJobs] = useState<Job[]>([]);
   const [loadingJobs, setLoadingJobs] = useState(false);
+  const [userName, setUserName] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
   type DbJobRow = {
     id: string;
     title: string;
@@ -133,7 +137,6 @@ export function Dashboard({ onPageChange }: DashboardProps) {
         if (!mounted) return;
         setSteps(status);
       } catch (e) {
-        console.error('Failed to load profile steps status', e);
       }
     })();
     return () => { mounted = false; };
@@ -191,6 +194,57 @@ export function Dashboard({ onPageChange }: DashboardProps) {
     })();
     return () => { mounted = false; };
   }, []);
+
+  // Load authenticated user's display name for the welcome header
+  useEffect(() => {
+    let isMounted = true;
+
+    const applyFromAuth = (u: any | null) => {
+      if (!isMounted) return;
+      const email = u?.email ?? null;
+      const metaName = u?.user_metadata?.name as string | undefined;
+      const fallbackName = email ? email.split('@')[0] : null;
+      setUserEmail(email);
+      setUserName(metaName || fallbackName);
+    };
+
+    const hydrateFromProfile = async (uid: string) => {
+      try {
+        const { data: profile } = await supabase
+          .from('users')
+          .select('name, email')
+          .eq('id', uid)
+          .single();
+        if (!isMounted) return;
+        if (profile) {
+          if (profile.email) setUserEmail(profile.email);
+          if (profile.name) setUserName(profile.name);
+        }
+      } catch {}
+    };
+
+    const init = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        applyFromAuth(user);
+        hydrateFromProfile(user.id);
+      }
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        const u = session?.user ?? null;
+        applyFromAuth(u);
+        if (u?.id) hydrateFromProfile(u.id);
+      });
+      return () => subscription?.unsubscribe();
+    };
+
+    const cleanupPromise = init();
+    return () => {
+      isMounted = false;
+      cleanupPromise.then((cleanup) => {
+        try { (cleanup as any)?.(); } catch {}
+      });
+    };
+  }, []);
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'interview': return 'bg-blue-100 text-blue-700 border-blue-200';
@@ -235,7 +289,7 @@ export function Dashboard({ onPageChange }: DashboardProps) {
           className="mb-8"
         >
           <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            Welcome back, Sarah! 👋
+            {`Welcome back, ${userName ?? '...'}!`} 👋
           </h1>
           <p className="text-muted-foreground mt-2">
             Here&apos;s what&apos;s happening with your job search today

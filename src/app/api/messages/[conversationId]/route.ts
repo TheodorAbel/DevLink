@@ -3,7 +3,7 @@ import { createSupabaseServerClient } from '@/lib/supabaseServer'
 
 // GET /api/messages/[conversationId]
 // Returns messages for a conversation, newest last
-export async function GET(req: NextRequest, { params }: { params: { conversationId: string } }) {
+export async function GET(req: NextRequest) {
   try {
     const authHeader = req.headers.get('authorization') || req.headers.get('Authorization')
     if (!authHeader?.startsWith('Bearer ')) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -13,7 +13,9 @@ export async function GET(req: NextRequest, { params }: { params: { conversation
     const { data: user } = await supabase.auth.getUser()
     if (!user?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const conversationId = params.conversationId
+    const url = new URL(req.url)
+    const segments = url.pathname.split('/').filter(Boolean)
+    const conversationId = segments[segments.length - 1] || ''
     if (!conversationId) return NextResponse.json({ error: 'conversationId is required' }, { status: 400 })
 
     // Verify user has access to this conversation via RLS by selecting from conversations
@@ -34,14 +36,14 @@ export async function GET(req: NextRequest, { params }: { params: { conversation
     if (error) return NextResponse.json({ error: 'Failed to load messages' }, { status: 500 })
 
     return NextResponse.json({ messages: messages ?? [] }, { status: 200 })
-  } catch (e) {
+  } catch {
     return NextResponse.json({ error: 'Unexpected error' }, { status: 500 })
   }
 }
 
 // POST /api/messages/[conversationId]
 // Body: { content: string }
-export async function POST(req: NextRequest, { params }: { params: { conversationId: string } }) {
+export async function POST(req: NextRequest) {
   try {
     const authHeader = req.headers.get('authorization') || req.headers.get('Authorization')
     if (!authHeader?.startsWith('Bearer ')) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -51,7 +53,9 @@ export async function POST(req: NextRequest, { params }: { params: { conversatio
     const { data: user } = await supabase.auth.getUser()
     if (!user?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const conversationId = params.conversationId
+    const url = new URL(req.url)
+    const segments = url.pathname.split('/').filter(Boolean)
+    const conversationId = segments[segments.length - 1] || ''
     if (!conversationId) return NextResponse.json({ error: 'conversationId is required' }, { status: 400 })
 
     const body = await req.json().catch(() => null) as { content?: string } | null
@@ -71,14 +75,17 @@ export async function POST(req: NextRequest, { params }: { params: { conversatio
     if (error || !inserted) return NextResponse.json({ error: 'Failed to send message' }, { status: 500 })
 
     // Update last_message_at on conversation (best-effort)
-    await supabase.from('conversations')
-      .update({ last_message_at: inserted.created_at })
-      .eq('id', conversationId)
-      .then(() => null)
-      .catch(() => null)
+    try {
+      await supabase
+        .from('conversations')
+        .update({ last_message_at: inserted.created_at })
+        .eq('id', conversationId)
+    } catch {
+      // ignore
+    }
 
     return NextResponse.json({ id: inserted.id, created_at: inserted.created_at }, { status: 201 })
-  } catch (e) {
+  } catch {
     return NextResponse.json({ error: 'Unexpected error' }, { status: 500 })
   }
 }

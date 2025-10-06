@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
     if (error) return NextResponse.json({ error: 'Failed to load conversations' }, { status: 500 })
 
     return NextResponse.json({ conversations: data ?? [] }, { status: 200 })
-  } catch (e) {
+  } catch {
     return NextResponse.json({ error: 'Unexpected error' }, { status: 500 })
   }
 }
@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
     if (createErr || !created) return NextResponse.json({ error: 'Failed to create conversation' }, { status: 500 })
 
     return NextResponse.json({ id: created.id }, { status: 201 })
-  } catch (e) {
+  } catch {
     return NextResponse.json({ error: 'Unexpected error' }, { status: 500 })
   }
 }

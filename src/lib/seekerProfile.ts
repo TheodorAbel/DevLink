@@ -30,11 +30,6 @@ export type UploadedResumeMeta = {
   storagePath: string // the storage object name (used in policies as 'name')
 }
 
-function sanitizeFilename(name: string): string {
-  // keep letters, numbers, dashes, underscores, and dots
-  return name.replace(/[^A-Za-z0-9._-]/g, '_')
-}
-
 export async function uploadSeekerResume(file: File): Promise<UploadedResumeMeta> {
   if (file.type !== 'application/pdf') {
     throw new Error('Only PDF resumes are allowed')

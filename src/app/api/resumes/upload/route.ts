@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ objectName, originalName, size: file.size }, { status: 201 })
-  } catch (e) {
+  } catch {
     return NextResponse.json({ error: 'Unexpected error' }, { status: 500 })
   }
 }
