@@ -1,120 +1,42 @@
-'use client';
+import SeekerPageClientWrapper from '@/components/SeekerPageInnerClient';
+import { Job } from '@/components/JobCard';
+import { headers } from 'next/headers';
 
-import { Suspense, useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { Navigation } from '@/components/Navigation';
-import { Dashboard } from '@/components/Dashboard';
-import { ProfileEdit } from '@/components/ProfileEdit';
-import { JobList } from '@/components/JobList';
-import { SavedJobs } from '@/components/SavedJobs';
-import { ApplicationDetail } from '@/components/ApplicationDetail';
-import { Settings } from '@/components/Settings';
-import { Messaging } from '@/components/Messaging';
-import { Analytics } from '@/components/Analytics';
-import { JobRecommendations } from '@/components/JobRecommendations';
-import { JobDetail } from '@/components/JobDetail';
-import RoleGuard from '@/components/RoleGuard';
-import { SeekerApplications } from '@/components/SeekerApplications';
-import { SaaSNotificationsPage } from '@/components/notifications/SaaSNotificationsPage';
+export const revalidate = 0;
 
-function SeekerPageInner() {
-  const searchParams = useSearchParams();
-  const [currentPage, setCurrentPage] = useState('dashboard');
-  const [profileTab, setProfileTab] = useState<'personal' | 'skills' | 'experience' | 'education' | 'resume'>('personal');
-  const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null);
-  // Notifications state managed inside notifications pages/components
-  
-  // Handle URL parameters for navigation
-  useEffect(() => {
-    const page = searchParams.get('page');
-    const tab = searchParams.get('tab');
-    
-    if (page) {
-      if (page === 'settings' && tab) {
-        setCurrentPage('settings');
-        // Pass tab to Settings component if needed
-      } else {
-        setCurrentPage(page);
-      }
-    }
-  }, [searchParams]);
+export default async function SeekerPage() {
+  // Use built-in fetch on the server (no useEffect)
+  const h = headers();
+  const proto = h.get('x-forwarded-proto') ?? 'http';
+  const host = h.get('host') ?? 'localhost:3000';
+  const apiUrl = `${proto}://${host}/api/jobs/recent`;
+  const res = await fetch(apiUrl, { cache: 'no-store' });
+  let recent: any[] = [];
+  if (res.ok) {
+    const json = await res.json();
+    recent = json?.jobs ?? [];
+  }
 
-  const handlePageChange = (page: string) => {
-    if (page === 'logout') {
-      // Handle logout logic here
-      console.log('Logout clicked');
-      return;
-    }
-    // Support deep-link like 'profile:resume'
-    if (page.startsWith('profile:')) {
-      const tab = page.split(':')[1] as typeof profileTab;
-      setProfileTab(tab || 'personal');
-      setCurrentPage('profile');
-      return;
-    }
-    // Navigating to applications list resets any selection
-    if (page === 'applications') {
-      setSelectedApplicationId(null);
-    }
-    setCurrentPage(page);
-  };
+  const initialRecentJobs: Job[] = (recent as any[]).map((j) => {
+    const typeMap: Record<string, string> = {
+      full_time: 'Full-time',
+      part_time: 'Part-time',
+      contract: 'Contract',
+      internship: 'Internship',
+    };
+    return {
+      id: j.id,
+      title: j.title,
+      company: j.companies?.company_name || 'Company',
+      companyId: j.company_id,
+      location: j.location ?? '—',
+      salary: 'Competitive',
+      type: typeMap[j.job_type ?? ''] || j.job_type || 'Full-time',
+      postedDate: j.published_at ? new Date(j.published_at).toLocaleDateString() : 'Recently',
+      description: j.description || '',
+      skills: Array.isArray(j.skills_required) ? j.skills_required : [],
+    } as Job;
+  });
 
-  const renderCurrentPage = () => {
-    switch (currentPage) {
-      case 'dashboard':
-        return <Dashboard onPageChange={handlePageChange} />;
-      case 'profile':
-        return <ProfileEdit onBack={() => setCurrentPage('dashboard')} initialTab={profileTab} />;
-      case 'jobs':
-        return <JobList onJobSelect={(jobId) => console.log('Job selected:', jobId)} />;
-      case 'saved-jobs':
-        return <SavedJobs onJobSelect={(jobId) => console.log('Saved job selected:', jobId)} />;
-      case 'applications':
-        return selectedApplicationId ? (
-          <ApplicationDetail onBack={() => setSelectedApplicationId(null)} jobId={selectedApplicationId} />
-        ) : (
-          <SeekerApplications onOpenApplication={(id) => setSelectedApplicationId(id)} />
-        );
-      case 'settings':
-        return <Settings onBack={() => setCurrentPage('dashboard')} />;
-      case 'messaging':
-        return <Messaging onBack={() => setCurrentPage('dashboard')} />;
-      case 'analytics':
-        return <Analytics onBack={() => setCurrentPage('dashboard')} />;
-      case 'recommendations':
-        return <JobRecommendations onJobSelect={(jobId) => console.log('Recommended job selected:', jobId)} />;
-      case 'job-detail':
-        return <JobDetail onBack={() => setCurrentPage('jobs')} />;
-      case 'notifications':
-        return (
-          <SaaSNotificationsPage 
-            onNavigateToSettings={() => handlePageChange('settings')}
-          />
-        );
-      default:
-        return <Dashboard onPageChange={handlePageChange} />;
-    }
-  };
-
-  return (
-    <RoleGuard allowedRole="seeker">
-      <div
-        className="min-h-screen bg-background"
-        style={{ paddingLeft: 'var(--seeker-sidebar-width, 0px)', transition: 'padding-left 200ms ease' }}
-      >
-        <Navigation currentPage={currentPage} onPageChange={handlePageChange} />
-        <main className="w-full">
-          {renderCurrentPage()}
-        </main>
-      </div>
-    </RoleGuard>
-  );
-}
-
-export default function SeekerPage() {
-  return (
-    <Suspense fallback={null}>
-      <SeekerPageInner />
-    </Suspense>
-  );
+  return <SeekerPageClientWrapper initialRecentJobs={initialRecentJobs} />;
 }
