@@ -1,59 +1,50 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { Job } from '@/components/JobCard';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Bookmark,
-  Heart,
-  Search,
-  Filter,
-  ArrowLeft,
-  Trash2,
-  Eye
-} from 'lucide-react';
-
-// Mock saved jobs data
-const mockSavedJobs: Job[] = [
-  {
-    id: '1',
-    title: 'Senior Frontend Developer',
-    company: 'TechCorp',
-    location: 'San Francisco, CA',
-    salary: '$120K - $160K',
-    type: 'Full-time',
-    postedDate: '2 days ago',
-    description: 'We are looking for an experienced frontend developer to join our team and help build amazing user experiences with React and TypeScript.',
-    skills: ['React', 'TypeScript', 'Next.js', 'Tailwind CSS'],
-    featured: true
-  },
-  {
-    id: '3',
-    title: 'Product Manager',
-    company: 'StartupXYZ',
-    location: 'New York, NY',
-    salary: '$100K - $140K',
-    type: 'Full-time',
-    postedDate: '3 days ago',
-    description: 'Lead product strategy and work with cross-functional teams to deliver great products that users love.',
-    skills: ['Strategy', 'Analytics', 'Agile', 'Roadmapping']
-  }
-];
+import { Bookmark, Heart, Search, Filter, ArrowLeft, Trash2, Eye } from 'lucide-react';
+import { useSavedJobsList, useSaveJobMutation, getMockSaved, setMockSaved as setMockSavedLocal } from '@/hooks/useSavedJobs';
 
 export default function SavedJobsPage() {
-  const [savedJobs, setSavedJobs] = useState<Job[]>(mockSavedJobs);
+  const { data: dbSaved = [], isLoading, error } = useSavedJobsList();
+  const saveMutation = useSaveJobMutation();
   const [searchQuery, setSearchQuery] = useState('');
+  const [savedDbIds, setSavedDbIds] = useState<Set<string>>(new Set());
+  const [mockSaved, setMockSaved] = useState<Job[]>(getMockSaved());
+  const savedJobs: Job[] = useMemo(() => {
+    const byId = new Map<string, Job>();
+    for (const j of dbSaved) byId.set(j.id, j);
+    for (const j of mockSaved) if (!byId.has(j.id)) byId.set(j.id, j);
+    return Array.from(byId.values());
+  }, [dbSaved, mockSaved]);
 
-  const handleRemoveJob = (jobId: string) => {
-    setSavedJobs(prev => prev.filter(job => job.id !== jobId));
+  // Track DB ids so we know which to delete via API
+  useEffect(() => {
+    setSavedDbIds(new Set((dbSaved || []).map(j => j.id)));
+  }, [dbSaved]);
+
+  const handleRemoveJob = async (jobId: string) => {
+    try {
+      if (savedDbIds.has(jobId)) {
+        await saveMutation.mutateAsync({ jobId, remove: true });
+        setSavedDbIds(prev => { const n = new Set(prev); n.delete(jobId); return n; });
+      } else {
+        // Remove from local storage mocks
+        const arr = getMockSaved().filter(j => j.id !== jobId);
+        setMockSaved(arr);
+        setMockSavedLocal(arr);
+      }
+    } catch {
+      // ignore
+    }
   };
 
   const handleViewJob = (jobId: string) => {
-    // Navigate to job detail
     window.location.href = `/jobs/${jobId}`;
   };
 
@@ -115,6 +106,12 @@ export default function SavedJobsPage() {
         </motion.div>
 
         {/* Saved Jobs Grid */}
+        {isLoading && (
+          <Card className="p-6 mb-6"><CardContent>Loading saved jobs…</CardContent></Card>
+        )}
+        {error && (
+          <Card className="p-6 mb-6"><CardContent className="text-red-600">{String(error)}</CardContent></Card>
+        )}
         {filteredJobs.length > 0 ? (
           <motion.div
             initial={{ opacity: 0 }}

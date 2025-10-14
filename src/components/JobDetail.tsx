@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 
 import { motion } from 'framer-motion';
 import { Card, CardHeader, CardTitle, CardContent } from './ui/card';
@@ -24,6 +24,7 @@ import { ApplySheet } from './ApplySheet';
 import { CompanyProfileView } from './company/CompanyProfileView';
 import { supabase } from '@/lib/supabaseClient';
 import { formatDistanceToNow } from 'date-fns';
+import { useJob, useHasApplied, type DbJob } from '@/hooks/useJob';
 
 interface JobDetailProps {
   onBack: () => void;
@@ -31,98 +32,20 @@ interface JobDetailProps {
   jobId?: string;
 }
 
-type DbJob = {
-  id: string;
-  title: string;
-  location: string | null;
-  job_type: string | null;
-  salary_type: string | null;
-  salary_min: number | null;
-  salary_max: number | null;
-  salary_fixed: number | null;
-  salary_currency: string | null;
-  custom_salary_message: string | null;
-  description: string | null;
-  requirements: string[] | null;
-  responsibilities: string[] | null;
-  skills_required: string[] | null;
-  application_deadline: string | null;
-  published_at: string | null;
-  company_id: string;
-  companies?: {
-    company_name: string | null;
-    description: string | null;
-    company_size: string | null;
-    industry: string | null;
-    founded_year: number | null;
-    website_url: string | null;
-    benefits: string[] | null;
-    headquarters: string | null;
-  } | null;
-};
+// DbJob type comes from useJob hook
 
 export function JobDetail({ onBack, autoOpenApply = false, jobId }: JobDetailProps) {
   const [isApplied, setIsApplied] = useState(false);
   const [applyOpen, setApplyOpen] = useState(autoOpenApply);
   const [showCompanyProfile, setShowCompanyProfile] = useState(false);
   const [companyData, setCompanyData] = useState<null | Parameters<typeof CompanyProfileView>[0]["company"]>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [dbJob, setDbJob] = useState<DbJob | null>(null);
+  const { data: dbJob, isLoading: loading, error } = useJob(jobId);
+  const { data: hasApplied } = useHasApplied(jobId);
   
-  // Fetch the job + company by ID
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        if (!jobId) {
-          setError('Missing job id');
-          return;
-        }
-        const { data, error } = await supabase
-          .from('jobs')
-          .select(`
-            id, title, location, job_type, salary_type, salary_min, salary_max, salary_fixed, salary_currency, custom_salary_message,
-            description, requirements, responsibilities, skills_required, application_deadline, published_at, company_id,
-            companies:company_id ( company_name, description, company_size, industry, founded_year, website_url, benefits, headquarters )
-          `)
-          .eq('id', jobId)
-          .maybeSingle();
-        if (error) throw error;
-        if (mounted) setDbJob(data as unknown as DbJob);
-      } catch (e: unknown) {
-        const message = e instanceof Error ? e.message : 'Failed to load job';
-        if (mounted) setError(message);
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    })();
-    return () => { mounted = false; };
-  }, [jobId]);
-
-  // Check if user already applied for this job to reflect button state
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        if (!jobId) return;
-        const { data: sessionData } = await supabase.auth.getSession();
-        const token = sessionData.session?.access_token;
-        if (!token) return;
-        const res = await fetch(`/api/applications?jobId=${encodeURIComponent(jobId)}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!mounted) return;
-        if (res.ok) {
-          const j = await res.json();
-          if (j && j.status === 'applied') setIsApplied(true);
-        }
-      } catch {}
-    })();
-    return () => { mounted = false };
-  }, [jobId]);
+  // keep local flag in sync with query result unless set by onApplied
+  React.useEffect(() => {
+    if (hasApplied) setIsApplied(true);
+  }, [hasApplied]);
 
   const mapped = useMemo(() => {
     if (!dbJob) return null;
@@ -263,7 +186,7 @@ export function JobDetail({ onBack, autoOpenApply = false, jobId }: JobDetailPro
         <AnimatedBackground variant="particles" />
         <div className="relative z-10 p-6 max-w-4xl mx-auto">
           <Button variant="ghost" onClick={onBack} className="mb-4">Back</Button>
-          <Card><CardContent className="p-6 text-red-600">{error}</CardContent></Card>
+          <Card><CardContent className="p-6 text-red-600">{String(error)}</CardContent></Card>
         </div>
       </div>
     );
@@ -376,21 +299,6 @@ export function JobDetail({ onBack, autoOpenApply = false, jobId }: JobDetailPro
           company={currentJob.company}
           jobId={currentJob.id}
           onApplied={() => setIsApplied(true)}
-          screeningQuestions={[
-            { id: 'q1', text: 'How many years of React experience do you have?', type: 'short-answer', required: true },
-            { id: 'q2', text: 'Are you comfortable with TypeScript?', type: 'yes-no', required: true },
-            { id: 'q3', text: 'What is your preferred testing framework?', type: 'multiple-choice', options: [
-              { id: 'jest', label: 'Jest', value: 'Jest' },
-              { id: 'rtl', label: 'React Testing Library', value: 'RTL' },
-              { id: 'cypress', label: 'Cypress', value: 'Cypress' },
-            ]},
-            { id: 'q4', text: 'Which frontend technologies are you proficient with?', type: 'checkbox', options: [
-              { id: 'react', label: 'React', value: 'React' },
-              { id: 'next', label: 'Next.js', value: 'Next.js' },
-              { id: 'vue', label: 'Vue', value: 'Vue' },
-              { id: 'svelte', label: 'Svelte', value: 'Svelte' },
-            ]},
-          ]}
         />
 
       {/* Job Meta Info */}

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
@@ -8,17 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { AnimatedBackground } from './AnimatedBackground';
 import { FileText, Search, Filter, Calendar, Building2, ChevronRight } from 'lucide-react';
-import { supabase } from '@/lib/supabaseClient';
+import { useApplications, type ApplicationItem as AppItem } from '@/hooks/useApplications';
 
-export type ApplicationItem = {
-  id: string;
-  jobId: string;
-  jobTitle: string;
-  company: string;
-  location: string;
-  appliedDate: string; // ISO or human readable
-  status: 'applied' | 'viewed' | 'interview' | 'accepted' | 'rejected' | 'pending';
-};
+export type ApplicationItem = AppItem;
 
 interface SeekerApplicationsProps {
   onOpenApplication: (applicationId: string) => void;
@@ -45,49 +37,9 @@ export function SeekerApplications({ onOpenApplication }: SeekerApplicationsProp
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState<string>('all');
   const [tab, setTab] = useState<'list' | 'board'>('list');
-  const [items, setItems] = useState<ApplicationItem[]>([]);
+  const { data: items = [], isLoading, error } = useApplications();
 
-  // Load user's applications and join minimal job info
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const { data: sessionData } = await supabase.auth.getSession();
-        const token = sessionData.session?.access_token;
-        if (!token) { setItems([]); return; }
-        const res = await fetch('/api/applications', { headers: { Authorization: `Bearer ${token}` } });
-        if (!mounted) return;
-        if (!res.ok) { setItems([]); return; }
-        const j = await res.json();
-        const list: RawApplication[] = Array.isArray(j.applications) ? j.applications : [];
-        if (!list.length) { setItems([]); return; }
-        const jobIds = list.map(a => a.job_id);
-        const { data: jobs } = await supabase
-          .from('jobs')
-          .select('id, title, location, companies:company_id ( company_name )')
-          .in('id', jobIds);
-        type JobRow = { id: string; title?: string | null; location?: string | null; companies?: { company_name?: string | null } | null }
-        const byId = new Map((jobs || []).map(j => [j.id as string, j as JobRow] as const));
-        const now = new Date();
-        const mapped: ApplicationItem[] = list.map((a) => {
-          const job = byId.get(a.job_id) as JobRow | undefined;
-          return {
-            id: a.id,
-            jobId: a.job_id,
-            jobTitle: job?.title || 'Job',
-            company: job?.companies?.company_name || 'Company',
-            location: job?.location || '—',
-            appliedDate: a.created_at || now.toISOString(),
-            status: a.status || 'pending',
-          } as ApplicationItem;
-        });
-        setItems(mapped);
-      } catch {
-        if (mounted) setItems([]);
-      }
-    })();
-    return () => { mounted = false };
-  }, []);
+  // data is provided by hook
 
   const filtered = useMemo(() => {
     return items.filter((a) => {
@@ -167,7 +119,17 @@ export function SeekerApplications({ onOpenApplication }: SeekerApplicationsProp
                   </motion.div>
                 ))}
               </AnimatePresence>
-              {filtered.length === 0 && (
+              {isLoading && (
+                <Card>
+                  <CardContent className="p-8 text-center text-muted-foreground">Loading applications…</CardContent>
+                </Card>
+              )}
+              {error && (
+                <Card>
+                  <CardContent className="p-8 text-center text-red-600">{String(error)}</CardContent>
+                </Card>
+              )}
+              {!isLoading && filtered.length === 0 && (
                 <Card>
                   <CardContent className="p-8 text-center text-muted-foreground">No applications found</CardContent>
                 </Card>

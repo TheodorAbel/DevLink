@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { Role } from "@/lib/roles";
+import { useUserBootstrap } from "@/hooks/useUserProfile";
 
 type RoleGuardProps = {
   allowedRole: Role;
@@ -17,52 +18,46 @@ export default function RoleGuard({ allowedRole, children }: RoleGuardProps) {
   // We only check once on initial mount to avoid UX flashes on tab switches
 
   useEffect(() => {
-    const checkRoleOnce = async () => {
+    let cancelled = false;
+    const run = async () => {
       setLoading(true);
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      const user = session?.user ?? null;
+      const { data: sess } = await supabase.auth.getSession();
+      const user = sess.session?.user ?? null;
       if (!user) {
-        setAuthorized(false);
-        setLoading(false);
-        router.push("/login");
+        if (!cancelled) {
+          setAuthorized(false);
+          setLoading(false);
+          router.push("/login");
+        }
         return;
       }
-
-      // Resolve role via secure server endpoint to bypass RLS
-      let effectiveRole: string | null = null;
+      // Fallback to metadata until bootstrap hook resolves
+      let effectiveRole = (user.user_metadata?.role as string | undefined)?.toLowerCase() ?? null;
       try {
-        const accessToken = session?.access_token;
+        // Prefer secure server-derived role
         const res = await fetch("/api/user/bootstrap", {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
+          headers: { Authorization: `Bearer ${sess.session?.access_token}` },
         });
         const out = await res.json().catch(() => ({}));
-        console.log("RoleGuard bootstrap response:", res.status, out);
-        const metaRole = (user.user_metadata?.role as string | undefined)?.toLowerCase();
-        effectiveRole = (out?.role as string | undefined)?.toLowerCase() ?? metaRole ?? null;
-      } catch (e) {
-        console.error("RoleGuard bootstrap call failed:", e);
-        const metaRole = (user.user_metadata?.role as string | undefined)?.toLowerCase();
-        effectiveRole = metaRole ?? null;
-      }
+        effectiveRole = (out?.role as string | undefined)?.toLowerCase() ?? effectiveRole;
+      } catch {}
 
       if (!effectiveRole || effectiveRole !== allowedRole.toLowerCase()) {
-        setAuthorized(false);
-        setLoading(false);
-        router.push("/403");
+        if (!cancelled) {
+          setAuthorized(false);
+          setLoading(false);
+          router.push("/403");
+        }
         return;
       }
-
-      setAuthorized(true);
-      setLoading(false);
+      if (!cancelled) {
+        setAuthorized(true);
+        setLoading(false);
+      }
     };
-
-    checkRoleOnce();
+    run();
+    return () => { cancelled = true };
   }, [allowedRole, router]);
 
   if (loading) {

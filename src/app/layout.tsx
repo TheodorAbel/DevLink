@@ -3,6 +3,7 @@ import "./globals.css";
 import { Toaster } from "react-hot-toast";
 import { Toaster as SonnerToaster } from "sonner";
 import { ThemeProvider } from "@/lib/theme-context";
+import { QueryProvider } from "@/providers/QueryProvider";
 import { ConditionalHeader } from "@/components/ConditionalHeader";
 
 const geistSans = Geist({
@@ -31,10 +32,12 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <ThemeProvider>
-          <ConditionalHeader />
-          {children}
-          <Toaster position="top-center" reverseOrder={false} />
-          <SonnerToaster position="top-center" richColors closeButton />
+          <QueryProvider>
+            <ConditionalHeader />
+            {children}
+            <Toaster position="top-center" reverseOrder={false} />
+            <SonnerToaster position="top-center" richColors closeButton />
+          </QueryProvider>
         </ThemeProvider>
       </body>
     </html>

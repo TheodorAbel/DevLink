@@ -19,6 +19,8 @@ import { toast } from 'sonner'
 import { CheckCircle2 } from 'lucide-react'
 import { supabase } from '@/lib/supabaseClient'
 import { fetchPrimaryResume, uploadSeekerResume } from '@/lib/seekerProfile'
+import { useJobQuestions, type ScreeningQuestion } from '@/hooks/useJobQuestions'
+import { useApplyMutation } from '@/hooks/useApplications'
 
 // Question types mirror employer PostJobForm
 export type ScreeningType = 'yes-no' | 'multiple-choice' | 'checkbox' | 'short-answer'
@@ -59,6 +61,8 @@ export function ApplySheet({ open, onOpenChange, jobTitle, company, jobId, profi
   const [primaryResumeName, setPrimaryResumeName] = React.useState<string | null>(null)
   const [hasPrimaryResume, setHasPrimaryResume] = React.useState<boolean>(false)
   const [questions, setQuestions] = React.useState<ScreeningQuestion[]>([])
+  const { data: fetchedQuestions } = useJobQuestions(jobId, open)
+  const applyMutation = useApplyMutation()
 
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<z.infer<typeof schema>>({
     resolver: zodResolver(schema),
@@ -113,55 +117,10 @@ export function ApplySheet({ open, onOpenChange, jobTitle, company, jobId, profi
     return () => { mounted = false }
   }, [open])
 
-  // Fetch screening questions for the job; skip step if none
+  // Set questions from query
   React.useEffect(() => {
-    let mounted = true
-    ;(async () => {
-      if (!open || !jobId) return
-      try {
-        const { data: sessionData } = await supabase.auth.getSession()
-        const token = sessionData.session?.access_token
-        const res = await fetch(`/api/jobs/${jobId}/questions`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-        })
-        if (!res.ok) {
-          setQuestions([])
-          return
-        }
-        const j = await res.json()
-        const raw = (j?.questions || []) as Array<{
-          id: string
-          question_text: string
-          question_type: string
-          options?: string[] | { id: string; label: string; value: string }[] | null
-          is_required?: boolean
-        }>
-        const mapped: ScreeningQuestion[] = raw.map((q) => {
-          let type: ScreeningType = 'short-answer'
-          const qt = (q.question_type || '').toLowerCase()
-          if (qt.includes('yes')) type = 'yes-no'
-          else if (qt.includes('multiple')) type = 'multiple-choice'
-          else if (qt.includes('checkbox')) type = 'checkbox'
-          else type = 'short-answer'
-
-          const optsRaw = q.options || []
-          const opts: ScreeningOption[] = Array.isArray(optsRaw)
-            ? (optsRaw as any[]).map((o: any, idx: number) => {
-                if (typeof o === 'string') return { id: String(idx), label: o, value: o }
-                return { id: String(o.id ?? idx), label: String(o.label ?? o.value ?? ''), value: String(o.value ?? o.label ?? '') }
-              })
-            : []
-          return { id: q.id, text: q.question_text, type, options: opts, required: !!q.is_required }
-        })
-        if (mounted) setQuestions(mapped)
-      } catch {
-        if (mounted) setQuestions([])
-      } finally {
-        // no-op
-      }
-    })()
-    return () => { mounted = false }
-  }, [open, jobId])
+    setQuestions(Array.isArray(fetchedQuestions) ? fetchedQuestions : [])
+  }, [fetchedQuestions])
 
   // Prefill existing application when editing
   React.useEffect(() => {
@@ -223,38 +182,8 @@ export function ApplySheet({ open, onOpenChange, jobTitle, company, jobId, profi
         }
       }
 
-      // Call applications API
-      const { data: sessionData } = await supabase.auth.getSession()
-      const token = sessionData.session?.access_token
-      if (!token) throw new Error('Not authenticated')
-      const res = await fetch('/api/applications', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          jobId,
-          coverLetter: form.coverLetter,
-          resumeUrl,
-          answers,
-        }),
-      })
-      if (!res.ok) {
-        let msg = 'failed to submit application'
-        try { const j = await res.json(); msg = j.error || msg } catch {}
-        // If already applied, fall back to updating the application
-        if (res.status === 409) {
-          const upd = await fetch('/api/applications', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ jobId, coverLetter: form.coverLetter, resumeUrl, answers }),
-          })
-          if (!upd.ok) {
-            try { const j2 = await upd.json(); msg = j2.error || msg } catch {}
-            throw new Error(msg)
-          }
-        } else {
-          throw new Error(msg)
-        }
-      }
+      // Submit via mutation (handles conflict-update internally)
+      await applyMutation.mutateAsync({ jobId, coverLetter: form.coverLetter, resumeUrl, answers })
       toast.success('Application submitted', { description: `${jobTitle} • ${company}` })
       // Notify parent + global listeners
       try { onApplied?.() } catch {}

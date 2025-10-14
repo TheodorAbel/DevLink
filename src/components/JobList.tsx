@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { JobCard, Job } from './JobCard';
 import { JobDetail } from './JobDetail';
@@ -39,6 +39,8 @@ import { toast } from 'sonner';
 import { ApplicantCompanyProfileDrawer } from './ApplicantCompanyProfileDrawer';
 import { supabase } from '@/lib/supabaseClient';
 import { formatDistanceToNow } from 'date-fns';
+import { useJobs } from '@/hooks/useJobs';
+import { useSavedJobsList, useSaveJobMutation, getMockSaved, toggleMockSaved } from '@/hooks/useSavedJobs';
 
 // Mock data - expanded for pagination testing
 const mockJobs: Job[] = [
@@ -193,12 +195,9 @@ export function JobList({ onJobSelect: _onJobSelect }: JobListProps) {
   const [showNotificationPrompt, setShowNotificationPrompt] = useState(true);
   void _onJobSelect;
   
-  // Saved jobs state
-  const [savedJobs, setSavedJobs] = useState<Set<string>>(new Set());
-  // DB jobs state
-  const [dbJobs, setDbJobs] = useState<Job[]>([]);
-  const [loadingDb, setLoadingDb] = useState(false);
-  const [dbError, setDbError] = useState<string | null>(null);
+  // Saved jobs state (db + mock)
+  const [savedDbIds, setSavedDbIds] = useState<Set<string>>(new Set());
+  const [savedMockIds, setSavedMockIds] = useState<Set<string>>(new Set());
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -211,111 +210,14 @@ export function JobList({ onJobSelect: _onJobSelect }: JobListProps) {
   const [companyOpen, setCompanyOpen] = useState(false);
   const [companyData, setCompanyData] = useState<null | Parameters<typeof ApplicantCompanyProfileDrawer>[0]["company"]>(null);
 
-  type DbJobRow = {
-    id: string;
-    title: string;
-    location: string | null;
-    job_type: string | null;
-    salary_type: string | null;
-    salary_min: number | null;
-    salary_max: number | null;
-    salary_fixed: number | null;
-    salary_currency: string | null;
-    custom_salary_message: string | null;
-    description: string | null;
-    skills_required: string[] | null;
-    published_at: string | null;
-    company_id: string;
-    // Supabase could return an object or array depending on relationship setup
-    companies?: { company_name: string | null } | Array<{ company_name: string | null }> | null;
-  };
+  // Jobs via TanStack Query
+  const { data: jobsData, isLoading: loadingDb, error: jobsError } = useJobs();
+  const dbJobs: Job[] = jobsData ?? [];
+  // Saved jobs (DB) via query
+  const { data: savedList } = useSavedJobsList();
+  const saveMutation = useSaveJobMutation();
 
-  // Fetch jobs from Supabase (active jobs, newest first)
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        setLoadingDb(true);
-        setDbError(null);
-        const { data, error } = await supabase
-          .from('jobs')
-          .select(`
-            id,
-            title,
-            location,
-            job_type,
-            salary_type,
-            salary_min,
-            salary_max,
-            salary_fixed,
-            salary_currency,
-            custom_salary_message,
-            description,
-            skills_required,
-            published_at,
-            company_id,
-            companies:company_id ( company_name )
-          `)
-          .eq('status', 'active')
-          .order('published_at', { ascending: false, nullsFirst: false });
-
-        if (error) {
-          throw error;
-        }
-
-        const mapped: Job[] = (data as DbJobRow[] | null | undefined || []).map((j) => {
-          // Build salary string
-          let salary = 'Competitive';
-          if (j.salary_type === 'range' && j.salary_min && j.salary_max) {
-            salary = `${j.salary_currency || 'ETB'} ${j.salary_min} - ${j.salary_max}`;
-          } else if (j.salary_type === 'fixed' && j.salary_fixed) {
-            salary = `${j.salary_currency || 'ETB'} ${j.salary_fixed}`;
-          } else if (j.custom_salary_message) {
-            salary = j.custom_salary_message;
-          }
-
-          const typeMap: Record<string, string> = {
-            full_time: 'Full-time',
-            part_time: 'Part-time',
-            contract: 'Contract',
-            internship: 'Internship',
-          };
-
-          const postedDate = j.published_at
-            ? `${formatDistanceToNow(new Date(j.published_at), { addSuffix: true })}`
-            : 'Recently';
-
-          // companies may be object or array
-          const companyName: string = Array.isArray(j.companies)
-            ? (j.companies[0]?.company_name ?? 'Company')
-            : (j.companies?.company_name ?? 'Company');
-
-          return {
-            id: j.id,
-            title: j.title,
-            company: companyName,
-            companyId: j.company_id,
-            location: j.location,
-            salary,
-            type: typeMap[j.job_type ?? ''] || j.job_type || 'Full-time',
-            postedDate,
-            description: j.description || '',
-            skills: Array.isArray(j.skills_required) ? j.skills_required : [],
-            featured: false,
-          } as Job;
-        });
-
-        if (mounted) setDbJobs(mapped);
-      } catch (e: unknown) {
-        const message = e instanceof Error ? e.message : 'Failed to load jobs';
-        if (mounted) setDbError(message);
-        console.error('Failed to fetch jobs:', e);
-      } finally {
-        if (mounted) setLoadingDb(false);
-      }
-    })();
-    return () => { mounted = false; };
-  }, []);
+  const dbError = jobsError ? (jobsError instanceof Error ? jobsError.message : 'Failed to load jobs') : null;
 
   // State for job alert panel
   const [showJobAlertPanel, setShowJobAlertPanel] = useState(false);
@@ -379,19 +281,43 @@ export function JobList({ onJobSelect: _onJobSelect }: JobListProps) {
 
   const deleteAlert = (id: string) => setAlerts(prev => prev.filter(a => a.id !== id));
 
-  // Handle save job
-  const handleSaveJob = (jobId: string) => {
-    setSavedJobs(prev => {
-      const newSavedJobs = new Set(prev);
-      if (newSavedJobs.has(jobId)) {
-        newSavedJobs.delete(jobId);
-        toast.success('Job removed from saved jobs');
+  // Load saved jobs for current user from query + mock from localStorage
+  useEffect(() => {
+    // derive DB saved ids from query
+    const ids = new Set<string>((savedList ?? []).map(j => j.id));
+    setSavedDbIds(ids);
+    // initialize mock saved ids from localStorage once
+    const arr = getMockSaved();
+    setSavedMockIds(new Set(arr.map(a => a.id)));
+    // we intentionally do not add savedMockIds to deps to avoid loops
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [savedList]);
+
+  const isDbJob = (jobId: string) => dbJobs.some(j => j.id === jobId);
+
+  // Handle save job (persist for DB, local for mock)
+  const handleSaveJob = async (jobId: string) => {
+    try {
+      if (isDbJob(jobId)) {
+        const isSaved = savedDbIds.has(jobId);
+        // React Query mutation for DB
+        await saveMutation.mutateAsync({ jobId, remove: isSaved });
+        setSavedDbIds(prev => {
+          const next = new Set(prev);
+          if (isSaved) next.delete(jobId); else next.add(jobId);
+          return next;
+        });
+        toast.success(isSaved ? 'Job removed from saved' : 'Job saved');
       } else {
-        newSavedJobs.add(jobId);
-        toast.success('Job saved successfully!');
+        // mock job: toggle in localStorage
+        const { next, saved } = toggleMockSaved(combinedJobs, jobId);
+        setSavedMockIds(new Set(next.map(j => j.id)));
+        toast.success(saved ? 'Job saved' : 'Job removed from saved');
       }
-      return newSavedJobs;
-    });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Failed to update saved job';
+      toast.error(msg);
+    }
   };
 
   // Handle share job
@@ -417,7 +343,7 @@ export function JobList({ onJobSelect: _onJobSelect }: JobListProps) {
     }
   };
 
-  const combinedJobs: Job[] = [...dbJobs, ...mockJobs];
+  const combinedJobs: Job[] = useMemo(() => [...dbJobs, ...mockJobs], [dbJobs]);
 
   const filteredJobs = combinedJobs.filter(job => {
     const matchesSearch = job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -737,7 +663,7 @@ export function JobList({ onJobSelect: _onJobSelect }: JobListProps) {
                     onSave={handleSaveJob}
                     onShare={handleShareJob}
                     onView={(jobId) => handleJobView(jobId)}
-                    isSaved={savedJobs.has(job.id)}
+                    isSaved={savedDbIds.has(job.id) || savedMockIds.has(job.id)}
                   />
                 </motion.div>
               ))}

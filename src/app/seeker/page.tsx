@@ -6,7 +6,7 @@ export const revalidate = 0;
 
 export default async function SeekerPage() {
   // Use built-in fetch on the server (no useEffect)
-  const h = headers();
+  const h = await headers();
   const proto = h.get('x-forwarded-proto') ?? 'http';
   const host = h.get('host') ?? 'localhost:3000';
   const apiUrl = `${proto}://${host}/api/jobs/recent`;

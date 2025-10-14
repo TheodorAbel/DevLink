@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardHeader, CardTitle, CardContent } from './ui/card';
 import { Button } from './ui/button';
@@ -16,7 +16,7 @@ import {
   User
 } from 'lucide-react';
 import { AnimatedBackground } from './AnimatedBackground';
-import { supabase } from '@/lib/supabaseClient';
+import { useApplicationByJob } from '@/hooks/useApplications';
 // (avatars not used in this component)
 import { toast } from 'sonner';
 
@@ -43,64 +43,21 @@ type LoadedJob = {
 }
 
 export function ApplicationDetail({ onBack, jobId, showMessages = false }: ApplicationDetailProps) {
-  const [app, setApp] = useState<LoadedApp | null>(null);
-  const [job, setJob] = useState<LoadedJob | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const { data: sessionData } = await supabase.auth.getSession();
-        const token = sessionData.session?.access_token;
-        if (!token) throw new Error('Unauthorized');
-        const res = await fetch(`/api/applications?jobId=${encodeURIComponent(jobId)}`, { headers: { Authorization: `Bearer ${token}` } });
-        if (!res.ok) throw new Error('Failed to load application');
-        const j = await res.json();
-        const loaded: LoadedApp = {
-          id: j.id,
-          status: j.status,
-          created_at: j.created_at || new Date().toISOString(),
-          coverLetter: j.coverLetter,
-          resumeUrl: j.resumeUrl,
-        };
-        if (mounted) setApp(loaded);
-        // Load job info
-        const { data: jobRow } = await supabase
-          .from('jobs')
-          .select('title, job_type, salary_type, salary_min, salary_max, salary_fixed, salary_currency, custom_salary_message, location, companies:company_id ( company_name )')
-          .eq('id', jobId)
-          .maybeSingle();
-        if (mounted) {
-          let salary = 'Competitive';
-          if (jobRow?.salary_type === 'range' && jobRow?.salary_min && jobRow?.salary_max) {
-            salary = `${jobRow.salary_currency || 'ETB'} ${jobRow.salary_min} - ${jobRow.salary_max}`;
-          } else if (jobRow?.salary_type === 'fixed' && jobRow?.salary_fixed) {
-            salary = `${jobRow.salary_currency || 'ETB'} ${jobRow.salary_fixed}`;
-          } else if (jobRow?.custom_salary_message) {
-            salary = jobRow.custom_salary_message;
-          }
-          const typeMap: Record<string, string> = { full_time: 'Full-time', part_time: 'Part-time', contract: 'Contract', internship: 'Internship' };
-          setJob({
-            title: jobRow?.title || 'Job',
-            company: (jobRow && typeof jobRow === 'object' && 'companies' in jobRow && (jobRow as { companies?: { company_name?: string } | null }).companies?.company_name) || 'Company',
-            location: jobRow?.location || '—',
-            salary,
-            type: typeMap[jobRow?.job_type || ''] || jobRow?.job_type || 'Full-time',
-          });
-        }
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : 'Failed to load application';
-        if (mounted) setError(msg);
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    })();
-    return () => { mounted = false };
-  }, [jobId]);
+  const { data, isLoading: loading, error } = useApplicationByJob(jobId);
+  const app: LoadedApp | null = useMemo(() => data?.app ? ({
+    id: data.app.id,
+    status: data.app.status,
+    created_at: data.app.created_at,
+    coverLetter: data.app.coverLetter,
+    resumeUrl: data.app.resumeUrl,
+  }) : null, [data]);
+  const job: LoadedJob | null = useMemo(() => data?.job ? ({
+    title: data.job.title,
+    company: data.job.company,
+    location: data.job.location,
+    salary: data.job.salary,
+    type: data.job.type,
+  }) : null, [data]);
 
   const getStatusColor = (status: string, completed: boolean, current: boolean) => {
     if (current) return 'text-blue-600 bg-blue-100 border-blue-300';
@@ -135,7 +92,7 @@ export function ApplicationDetail({ onBack, jobId, showMessages = false }: Appli
         <AnimatedBackground variant="gradient" />
         <div className="relative z-10 p-6 max-w-6xl mx-auto">
           <Button variant="ghost" onClick={onBack} className="mb-4">Back</Button>
-          <Card><CardContent className="p-6 text-red-600">{error || 'Application not found'}</CardContent></Card>
+          <Card><CardContent className="p-6 text-red-600">{String(error) || 'Application not found'}</CardContent></Card>
         </div>
       </div>
     );
