@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, memo } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardHeader, CardTitle, CardContent } from './ui/card';
 import { Button } from './ui/button';
@@ -30,9 +30,15 @@ import {
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
 import { toast } from 'sonner';
+import { Chat } from '@/components/Chat';
+import { supabase } from '@/lib/supabaseClient';
 
 interface MessagingProps {
   onBack?: () => void;
+  initialConversationId?: string;
+  initialParticipantId?: string;
+  initialJobId?: string;
+  initialApplicationId?: string;
 }
 
 // Mock conversations data
@@ -151,20 +157,53 @@ const mockMessages = [
   }
 ];
 
-export function Messaging({ onBack }: MessagingProps) {
+export function Messaging({ onBack, initialConversationId, initialParticipantId, initialJobId, initialApplicationId }: MessagingProps) {
   const [selectedConversation, setSelectedConversation] = useState<string | null>('1');
   const [messages, setMessages] = useState(mockMessages);
   const [newMessage, setNewMessage] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [isMobile, setIsMobile] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [companyName, setCompanyName] = useState<string | null>(null);
+  const [companyLogo, setCompanyLogo] = useState<string | null>(null);
 
   useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    const compute = () => {
+      if (typeof window !== 'undefined') {
+        setIsMobile(window.innerWidth < 768);
+      }
+    };
+    compute();
+    window.addEventListener('resize', compute);
+    return () => window.removeEventListener('resize', compute);
   }, []);
+
+  // If initial conversation/participant provided, render focused chat using real API-backed Chat component
+  const hasFocused = !!(initialConversationId || initialParticipantId);
+
+  // Fetch company info for focused chat header (from job)
+  useEffect(() => {
+    let ignore = false;
+    const run = async () => {
+      try {
+        if (!initialJobId) return;
+        const { data, error } = await supabase
+          .from('jobs')
+          .select('companies:company_id ( company_name, logo_url )')
+          .eq('id', initialJobId)
+          .maybeSingle();
+        if (error || !data) return;
+        if (!ignore) {
+          const comp = (data as any).companies as { company_name?: string | null; logo_url?: string | null } | null;
+          setCompanyName(comp?.company_name ?? null);
+          setCompanyLogo(comp?.logo_url ?? null);
+        }
+      } catch {}
+    };
+    run();
+    return () => { ignore = true };
+  }, [initialJobId]);
 
   useEffect(() => {
     scrollToBottom();
@@ -272,7 +311,7 @@ export function Messaging({ onBack }: MessagingProps) {
     }
   };
 
-  const ConversationsList = () => (
+  const ConversationsList = memo(() => (
     <Card className="h-full">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
@@ -351,9 +390,9 @@ export function Messaging({ onBack }: MessagingProps) {
         </ScrollArea>
       </CardContent>
     </Card>
-  );
+  ));
 
-  const ChatArea = () => {
+  const ChatArea = memo(() => {
     if (!currentConversation) {
       return (
         <Card className="h-full flex items-center justify-center">
@@ -542,45 +581,53 @@ export function Messaging({ onBack }: MessagingProps) {
         />
       </Card>
     );
-  };
+  });
 
   return (
     <div className="min-h-screen relative">
       <AnimatedBackground variant="gradient" />
-      
       <div className="relative z-10 p-6 max-w-7xl mx-auto">
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-6"
-        >
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
           <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
             Messages
           </h1>
-          <p className="text-muted-foreground mt-2">
-            Communicate with employers and recruiters
-          </p>
+          <p className="text-muted-foreground mt-2">Communicate with employers and recruiters</p>
         </motion.div>
 
-        {/* Chat Interface */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="h-[calc(100vh-180px)]"
-        >
+        {/* Focused Chat (from Applications quick action) */}
+        {hasFocused && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="mb-6">
+            <Card className="relative overflow-hidden">
+              <CardHeader className="relative pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <CardTitle>Conversation</CardTitle>
+                    {companyName && <Badge variant="secondary" className="text-xs">{companyName}</Badge>}
+                  </div>
+                  {onBack && <Button variant="ghost" size="sm" onClick={onBack}>Back</Button>}
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Chat
+                  title="Chat"
+                  participantId={initialParticipantId || ''}
+                  jobId={initialJobId}
+                  applicationId={initialApplicationId}
+                  className="h-[70vh]"
+                />
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+
+        {/* Chat Interface (legacy UI) */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="h-[calc(100vh-180px)]">
           {isMobile ? (
-            // Mobile Layout
             <div className="h-full">
-              {selectedConversation ? (
-                <ChatArea />
-              ) : (
-                <ConversationsList />
-              )}
+              {selectedConversation ? <ChatArea /> : <ConversationsList />}
             </div>
           ) : (
-            // Desktop Layout
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
               <div className="lg:col-span-1">
                 <ConversationsList />

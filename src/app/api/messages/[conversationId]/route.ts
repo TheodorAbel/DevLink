@@ -29,13 +29,23 @@ export async function GET(req: NextRequest) {
 
     const { data: messages, error } = await supabase
       .from('messages')
-      .select('id, conversation_id, sender_user_id, content, created_at, read_by_recipient')
+      .select('id, conversation_id, sender_user_id, message_content, created_at, is_read')
       .eq('conversation_id', conversationId)
       .order('created_at', { ascending: true })
 
     if (error) return NextResponse.json({ error: 'Failed to load messages' }, { status: 500 })
 
-    return NextResponse.json({ messages: messages ?? [] }, { status: 200 })
+    // Map DB columns to client shape
+    const mapped = (messages || []).map((m: any) => ({
+      id: m.id,
+      conversation_id: m.conversation_id,
+      sender_user_id: m.sender_user_id,
+      content: m.message_content,
+      created_at: m.created_at,
+      read_by_recipient: m.is_read ?? null,
+    }))
+
+    return NextResponse.json({ messages: mapped }, { status: 200 })
   } catch {
     return NextResponse.json({ error: 'Unexpected error' }, { status: 500 })
   }
@@ -61,13 +71,25 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => null) as { content?: string } | null
     if (!body?.content || !body.content.trim()) return NextResponse.json({ error: 'content is required' }, { status: 400 })
 
-    // Insert message (RLS 'Users can send messages in own conversations' must allow this)
+    // Resolve receiver from conversation participants
+    const { data: convo, error: cErr } = await supabase
+      .from('conversations')
+      .select('participant_1_id, participant_2_id')
+      .eq('id', conversationId)
+      .maybeSingle()
+
+    if (cErr || !convo) return NextResponse.json({ error: 'Conversation not found' }, { status: 404 })
+    const senderId = user.user.id
+    const receiverId = convo.participant_1_id === senderId ? convo.participant_2_id : convo.participant_1_id
+
+    // Insert message (RLS policy expects conversation ownership)
     const { data: inserted, error } = await supabase
       .from('messages')
       .insert({
         conversation_id: conversationId,
-        sender_user_id: user.user.id,
-        content: body.content.trim(),
+        sender_user_id: senderId,
+        receiver_user_id: receiverId,
+        message_content: body.content.trim(),
       })
       .select('id, created_at')
       .single()

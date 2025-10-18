@@ -104,7 +104,7 @@ export async function uploadSeekerResume(file: File): Promise<UploadedResumeMeta
   }
 }
 
-export async function fetchPrimaryResume(): Promise<{ file_name: string; file_url: string; uploaded_at: string | null; file_size: number | null } | null> {
+export async function fetchPrimaryResume(): Promise<{ id: string; file_name: string; file_url: string; uploaded_at: string | null; file_size: number | null } | null> {
   const userId = await getUserId()
   const { data: profileRow, error: profErr } = await supabase
     .from('seeker_profiles')
@@ -115,12 +115,30 @@ export async function fetchPrimaryResume(): Promise<{ file_name: string; file_ur
   if (!profileRow) return null
   const { data, error } = await supabase
     .from('seeker_resumes')
-    .select('file_name, file_url, uploaded_at, file_size')
+    .select('id, file_name, file_url, uploaded_at, file_size')
     .eq('seeker_profile_id', profileRow.id)
     .eq('is_primary', true)
     .maybeSingle()
   if (error) throw error
   return data ?? null
+}
+
+export async function deletePrimaryResume(): Promise<boolean> {
+  const userId = await getUserId()
+  const { data: profileRow, error: profErr } = await supabase
+    .from('seeker_profiles')
+    .select('id')
+    .eq('user_id', userId)
+    .maybeSingle()
+  if (profErr) throw profErr
+  if (!profileRow) return false
+  const { error } = await supabase
+    .from('seeker_resumes')
+    .delete()
+    .eq('seeker_profile_id', profileRow.id)
+    .eq('is_primary', true)
+  if (error) throw error
+  return true
 }
 
 export async function createResumeSignedUrl(storagePath: string, expiresInSeconds = 60): Promise<string> {
@@ -411,21 +429,21 @@ async function evaluateProfileCompletion(seekerProfileId: string): Promise<Profi
     .single()
   if (pErr) throw new Error(`Failed to read seeker_profiles for completion: ${pErr.message || 'unknown error'}`)
 
-  // Related counts (fetch rows and use lengths to avoid count/head issues)
+  // Related counts (use count with head to minimize payload)
   const [skills, exp, edu, resume] = await Promise.all([
-    supabase.from('seeker_skills').select('id').eq('seeker_profile_id', seekerProfileId),
-    supabase.from('seeker_experience').select('id').eq('seeker_profile_id', seekerProfileId),
-    supabase.from('seeker_education').select('id').eq('seeker_profile_id', seekerProfileId),
-    supabase.from('seeker_resumes').select('id').eq('seeker_profile_id', seekerProfileId).eq('is_primary', true),
+    supabase.from('seeker_skills').select('id', { count: 'exact', head: true }).eq('seeker_profile_id', seekerProfileId),
+    supabase.from('seeker_experience').select('id', { count: 'exact', head: true }).eq('seeker_profile_id', seekerProfileId),
+    supabase.from('seeker_education').select('id', { count: 'exact', head: true }).eq('seeker_profile_id', seekerProfileId),
+    supabase.from('seeker_resumes').select('id', { count: 'exact', head: true }).eq('seeker_profile_id', seekerProfileId).eq('is_primary', true),
   ])
   if (skills.error) throw new Error(`Failed to load seeker_skills (completion): ${skills.error.message || 'unknown error'}`)
   if (exp.error) throw new Error(`Failed to load seeker_experience (completion): ${exp.error.message || 'unknown error'}`)
   if (edu.error) throw new Error(`Failed to load seeker_education (completion): ${edu.error.message || 'unknown error'}`)
   if (resume.error) throw new Error(`Failed to load seeker_resumes (completion): ${resume.error.message || 'unknown error'}`)
-  const skillsCount = (skills.data?.length) ?? 0
-  const expCount = (exp.data?.length) ?? 0
-  const eduCount = (edu.data?.length) ?? 0
-  const hasResume = ((resume.data?.length) ?? 0) > 0
+  const skillsCount = skills.count ?? 0
+  const expCount = exp.count ?? 0
+  const eduCount = edu.count ?? 0
+  const hasResume = (resume.count ?? 0) > 0
 
   // Checklist
   const checks: Array<{ key: string; filled: boolean }> = [

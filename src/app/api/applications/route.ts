@@ -23,6 +23,8 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url)
     const jobId = searchParams.get('jobId') || ''
+    const limitParam = Number(searchParams.get('limit') || '')
+    const limit = Number.isFinite(limitParam) ? Math.min(Math.max(limitParam, 1), 100) : 20
 
     const { data: userData, error: userErr } = await supabase.auth.getUser()
     if (userErr || !userData?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -30,10 +32,24 @@ export async function GET(req: NextRequest) {
     const seekerUserId = userData.user.id
 
     if (!jobId) {
+      // Single round-trip: include job title/location and company name
       const { data: list, error: listErr } = await supabase
         .from('applications')
-        .select('id, job_id, status, created_at')
+        .select(`
+          id,
+          job_id,
+          status,
+          created_at,
+          jobs:job_id (
+            id,
+            title,
+            location,
+            companies:company_id ( company_name )
+          )
+        `)
         .eq('seeker_user_id', seekerUserId)
+        .order('created_at', { ascending: false })
+        .range(0, limit - 1)
 
       if (listErr) return NextResponse.json({ error: 'Failed to load applications' }, { status: 500 })
       return NextResponse.json({ applications: list || [] })

@@ -25,26 +25,37 @@ export function Chat({ title = "Messages", participantId, jobId, applicationId, 
   const [sending, setSending] = useState(false);
   const pollRef = useRef<number | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
   const canSend = useMemo(() => input.trim().length > 0 && !!conversationId, [input, conversationId]);
 
+  const isNearBottom = useCallback(() => {
+    const el = listRef.current;
+    if (!el) return true;
+    const threshold = 100; // px
+    return el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
+  }, []);
+
   const scrollToBottom = useCallback(() => {
-    if (listRef.current) {
-      listRef.current.scrollTop = listRef.current.scrollHeight;
-    }
+    const el = listRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
   }, []);
 
   const refresh = useCallback(async () => {
     if (!conversationId) return;
     try {
       const msgs = await getMessages(conversationId);
+      const shouldStick = isNearBottom();
       setMessages(msgs);
-      // Auto scroll on refresh
-      setTimeout(scrollToBottom, 0);
+      if (shouldStick) {
+        // Auto scroll only if user was already near bottom
+        setTimeout(scrollToBottom, 0);
+      }
     } catch {
       // ignore transient
     }
-  }, [conversationId, scrollToBottom]);
+  }, [conversationId, scrollToBottom, isNearBottom]);
 
   useEffect(() => {
     setLoading(true);
@@ -82,6 +93,8 @@ export function Chat({ title = "Messages", participantId, jobId, applicationId, 
       await sendMessage(conversationId, text);
       setInput("");
       await refresh();
+      // After sending own message, stick to bottom
+      setTimeout(scrollToBottom, 0);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to send message");
     } finally {
@@ -94,7 +107,7 @@ export function Chat({ title = "Messages", participantId, jobId, applicationId, 
       <CardHeader>
         <CardTitle>{title}</CardTitle>
       </CardHeader>
-      <CardContent className="flex flex-col h-[420px]">
+      <CardContent className="flex flex-col h-full">
         <div ref={listRef} className="flex-1 overflow-auto space-y-3 pr-1">
           {loading && <div className="text-sm text-muted-foreground">Loading conversation…</div>}
           {!loading && messages.length === 0 && (
@@ -121,6 +134,7 @@ export function Chat({ title = "Messages", participantId, jobId, applicationId, 
                 onSend();
               }
             }}
+            ref={inputRef}
           />
           <Button onClick={onSend} disabled={!canSend || sending}>
             Send

@@ -17,24 +17,42 @@ type JobRow = { id: string; title?: string | null; location?: string | null; com
 
 export function useApplications() {
   return useQuery({
-    queryKey: ['applications'],
+    queryKey: ['applications', { limit: 12 }],
+    staleTime: 60_000,
+    gcTime: 5 * 60_000,
     queryFn: async (): Promise<ApplicationItem[]> => {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
       if (!token) return [];
-      const res = await fetch('/api/applications', { headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch('/api/applications?limit=12', { headers: { Authorization: `Bearer ${token}` } });
       if (!res.ok) return [];
       const j = await res.json();
-      const list: RawApplication[] = Array.isArray(j.applications) ? j.applications : [];
+      const list: any[] = Array.isArray(j.applications) ? j.applications : [];
       if (!list.length) return [];
-      const jobIds = list.map(a => a.job_id);
+      const now = new Date();
+      // If API provided joined jobs, map directly for speed
+      if (list[0] && typeof list[0] === 'object' && 'jobs' in list[0]) {
+        return list.map((a) => {
+          const job = a.jobs as { id?: string; title?: string | null; location?: string | null; companies?: { company_name?: string | null } | null } | null;
+          return {
+            id: a.id as string,
+            jobId: (a.job_id as string) || (job?.id as string),
+            jobTitle: job?.title || 'Job',
+            company: (job?.companies?.company_name) || 'Company',
+            location: job?.location || '—',
+            appliedDate: (a.created_at as string) || now.toISOString(),
+            status: (a.status as ApplicationItem['status']) || 'pending',
+          } satisfies ApplicationItem;
+        });
+      }
+      // Fallback: legacy path fetches jobs once
+      const jobIds = (list as RawApplication[]).map(a => a.job_id);
       const { data: jobs } = await supabase
         .from('jobs')
         .select('id, title, location, companies:company_id ( company_name )')
         .in('id', jobIds);
       const byId = new Map((jobs || []).map(jr => [jr.id as string, jr as JobRow] as const));
-      const now = new Date();
-      return list.map((a) => {
+      return (list as RawApplication[]).map((a) => {
         const job = byId.get(a.job_id) as JobRow | undefined;
         return {
           id: a.id,

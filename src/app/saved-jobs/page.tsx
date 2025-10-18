@@ -23,9 +23,17 @@ export default function SavedJobsPage() {
     return Array.from(byId.values());
   }, [dbSaved, mockSaved]);
 
-  // Track DB ids so we know which to delete via API
+  // Track DB ids so we know which to delete via API (avoid unnecessary state updates)
   useEffect(() => {
-    setSavedDbIds(new Set((dbSaved || []).map(j => j.id)));
+    const next = new Set((dbSaved || []).map((j) => j.id));
+    setSavedDbIds((prev) => {
+      if (prev.size === next.size) {
+        let same = true;
+        for (const id of prev) { if (!next.has(id)) { same = false; break; } }
+        if (same) return prev; // no change
+      }
+      return next;
+    });
   }, [dbSaved]);
 
   const handleRemoveJob = async (jobId: string) => {

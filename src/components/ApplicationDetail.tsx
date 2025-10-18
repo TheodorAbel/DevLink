@@ -19,11 +19,13 @@ import { AnimatedBackground } from './AnimatedBackground';
 import { useApplicationByJob } from '@/hooks/useApplications';
 // (avatars not used in this component)
 import { toast } from 'sonner';
+import { supabase } from '@/lib/supabaseClient';
 
 interface ApplicationDetailProps {
   onBack: () => void;
   jobId: string;
   showMessages?: boolean;
+  onSendMessage?: (args: { participantId: string; jobId: string; applicationId: string }) => void;
 }
 
 type LoadedApp = {
@@ -42,7 +44,7 @@ type LoadedJob = {
   type?: string;
 }
 
-export function ApplicationDetail({ onBack, jobId, showMessages = false }: ApplicationDetailProps) {
+export function ApplicationDetail({ onBack, jobId, showMessages = false, onSendMessage }: ApplicationDetailProps) {
   const { data, isLoading: loading, error } = useApplicationByJob(jobId);
   const app: LoadedApp | null = useMemo(() => data?.app ? ({
     id: data.app.id,
@@ -269,7 +271,24 @@ export function ApplicationDetail({ onBack, jobId, showMessages = false }: Appli
                   <Button 
                     variant="outline" 
                     className="w-full justify-start"
-                    onClick={() => toast.success('Opening messaging...')}
+                    onClick={async () => {
+                      try {
+                        if (!app?.id) return;
+                        // Find employer user who posted this job
+                        const { data: jr, error: jerr } = await supabase
+                          .from('jobs')
+                          .select('posted_by_user_id')
+                          .eq('id', jobId)
+                          .maybeSingle();
+                        if (jerr || !jr?.posted_by_user_id) {
+                          toast.error('Could not find employer to message');
+                          return;
+                        }
+                        onSendMessage?.({ participantId: jr.posted_by_user_id as string, jobId, applicationId: app.id });
+                      } catch {
+                        toast.error('Failed to open messaging');
+                      }
+                    }}
                   >
                     <MessageSquare className="h-4 w-4 mr-2" />
                     Send Message

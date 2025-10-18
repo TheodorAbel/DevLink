@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -18,6 +20,8 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { Button } from './ui/button';
+import { useQueryClient } from '@tanstack/react-query';
+import { fetchProfileStepsStatus, fetchSeekerProfile, fetchProfileCompletion, fetchPrimaryResume } from '@/lib/seekerProfile';
 
 interface NavigationProps {
   currentPage: string;
@@ -39,6 +43,7 @@ const menuItems = [
 
 export function Navigation({ currentPage, onPageChange }: NavigationProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const qc = useQueryClient();
   // Desktop collapse state
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
@@ -64,6 +69,21 @@ export function Navigation({ currentPage, onPageChange }: NavigationProps) {
   const handleItemClick = (itemId: string) => {
     onPageChange(itemId);
     setIsOpen(false);
+  };
+
+  const prefetchFor = async (itemId: string) => {
+    try {
+      if (itemId === 'dashboard') {
+        await qc.prefetchQuery({ queryKey: ['profileStepsStatus'], queryFn: fetchProfileStepsStatus, staleTime: 1000 * 60 * 5 });
+      }
+      if (itemId === 'profile') {
+        await Promise.all([
+          qc.prefetchQuery({ queryKey: ['profileEdit','profile'], queryFn: fetchSeekerProfile, staleTime: 1000 * 60 * 5 }),
+          qc.prefetchQuery({ queryKey: ['primaryResume'], queryFn: fetchPrimaryResume, staleTime: 1000 * 60 * 5 }),
+          qc.prefetchQuery({ queryKey: ['profileCompletion'], queryFn: fetchProfileCompletion, staleTime: 1000 * 60 * 5 }),
+        ]);
+      }
+    } catch {}
   };
 
   const handleTopButtonClick = () => {
@@ -152,6 +172,8 @@ export function Navigation({ currentPage, onPageChange }: NavigationProps) {
                         }
                       `}
                       onClick={() => handleItemClick(item.id)}
+                      onMouseEnter={() => prefetchFor(item.id)}
+                      onFocus={() => prefetchFor(item.id)}
                     >
                       <Icon className="h-4 w-4" />
                       <span className="hidden md:inline">{item.label}</span>
@@ -212,6 +234,8 @@ export function Navigation({ currentPage, onPageChange }: NavigationProps) {
                     `}
                     title={collapsed ? item.label : undefined}
                     onClick={() => handleItemClick(item.id)}
+                    onMouseEnter={() => prefetchFor(item.id)}
+                    onFocus={() => prefetchFor(item.id)}
                   >
                     <Icon className="h-4 w-4" />
                     {!collapsed && <span className="truncate">{item.label}</span>}

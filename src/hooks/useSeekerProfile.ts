@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabaseClient";
+import { fetchProfileStepsStatus } from "@/lib/seekerProfile";
 
 // Types align to schema.sql tables (minimal fields needed by UI)
 export type SeekerProfile = {
@@ -64,7 +65,7 @@ export function useSeekerProfile() {
       if (error) throw new Error(error.message);
       return data as unknown as SeekerProfile | null;
     },
-    staleTime: 60_000,
+    staleTime: 1000 * 60 * 5,
   });
 }
 
@@ -102,7 +103,7 @@ export function useSeekerExperience() {
       if (error) throw new Error(error.message);
       return (data || []) as Experience[];
     },
-    staleTime: 60_000,
+    staleTime: 1000 * 60 * 5,
   });
 }
 
@@ -167,7 +168,7 @@ export function useSeekerEducation() {
       if (error) throw new Error(error.message);
       return (data || []) as Education[];
     },
-    staleTime: 60_000,
+    staleTime: 1000 * 60 * 5,
   });
 }
 
@@ -232,6 +233,7 @@ export function useResumes() {
       if (error) throw new Error(error.message);
       return (data || []) as Resume[];
     },
+    staleTime: 1000 * 60 * 5,
   });
 }
 
@@ -283,5 +285,32 @@ export function useDeleteResume() {
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ["resumes"] });
     },
+  });
+}
+
+// Derive profile step status with instant initialData from cached queries
+export function useProfileStepsStatus() {
+  const qc = useQueryClient();
+  return useQuery({
+    queryKey: ["profileStepsStatus"],
+    queryFn: fetchProfileStepsStatus,
+    staleTime: 1000 * 60 * 5,
+    initialData: (() => {
+      try {
+        const profile = qc.getQueryData<SeekerProfile | null>(["seekerProfile"]) || null;
+        const exp = qc.getQueryData<Experience[]>(["seekerExperience"]) || [];
+        const edu = qc.getQueryData<Education[]>(["seekerEducation"]) || [];
+        const resumes = qc.getQueryData<Resume[]>(["resumes"]) || [];
+        if (!profile && exp.length === 0 && edu.length === 0 && resumes.length === 0) return undefined;
+        const basic = !!(profile?.full_name || profile?.headline || profile?.location || profile?.about);
+        const experience = (exp?.length || 0) > 0;
+        const resume = (resumes?.some(r => r.is_primary) || resumes.length > 0);
+        const contact = !!(profile && (profile.location || profile.about));
+        return { basic, experience, resume, contact } as { basic: boolean; experience: boolean; resume: boolean; contact: boolean };
+      } catch {
+        return undefined;
+      }
+    })(),
+    placeholderData: (prev) => prev,
   });
 }

@@ -6,7 +6,6 @@ import type { CompanyProfilePayload } from '@/types/company'
 // Helper: pick only allowed keys for companies table
 function pickCompanyCore(body: CompanyProfilePayload) {
   const out: Record<string, unknown> = {}
-
   // Helper that skips undefined, and skips empty strings/arrays; includes booleans and numbers (incl. 0)
   const add = (key: string, value: unknown) => {
     if (value === undefined) return
@@ -52,6 +51,92 @@ function pickCompanyCore(body: CompanyProfilePayload) {
   add('hiring_process', body.hiring_process)
 
   return out
+}
+
+export async function GET(req: NextRequest) {
+  try {
+    const authHeader = req.headers.get('authorization') || req.headers.get('Authorization') || ''
+    const token = authHeader.startsWith('Bearer ')
+      ? authHeader.slice('Bearer '.length)
+      : ''
+    if (!token) {
+      return NextResponse.json({ error: 'Missing Authorization bearer token' }, { status: 401 })
+    }
+
+    const supabase = createSupabaseServerClient(token)
+    const { data: userRes, error: userErr } = await supabase.auth.getUser()
+    if (userErr || !userRes?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    const userId = userRes.user.id
+
+    // Get user's company_id
+    const { data: userRow, error: userRowErr } = await supabase
+      .from('users')
+      .select('company_id')
+      .eq('id', userId)
+      .single()
+    if (userRowErr) {
+      return NextResponse.json({ error: 'Failed to load user row', details: userRowErr.message }, { status: 400 })
+    }
+    const companyId = userRow?.company_id as string | null
+    if (!companyId) {
+      return NextResponse.json({ company: null })
+    }
+
+    // Load company core
+    const { data: company, error: companyErr } = await supabase
+      .from('companies')
+      .select(`
+        id,
+        company_name, logo_url, cover_image_url, website_url,
+        industry, company_size, founded_year, headquarters,
+        registration_number, tax_id,
+        country, city, address,
+        tagline, description, culture, specialties, benefits,
+        verification_status, is_verified,
+        registration_document_url, business_license_url,
+        remote_policy,
+        linkedin_url, twitter_url, facebook_url, github_url, youtube_url,
+        contact_email, contact_phone,
+        show_employees, show_culture, show_media, show_leadership, show_hiring, show_contacts, show_socials,
+        is_active,
+        hiring_process,
+        created_at, updated_at
+      `)
+      .eq('id', companyId)
+      .maybeSingle()
+    if (companyErr) {
+      return NextResponse.json({ error: 'Failed to load company', details: companyErr.message }, { status: 400 })
+    }
+
+    // Child collections
+    const [leadersRes, mediaRes, cultureRes, jobDefaultsRes, billingRes] = await Promise.all([
+      supabase.from('company_leaders').select('id,name,title,photo_url,linkedin_url,display_order').eq('company_id', companyId).order('display_order', { ascending: true }),
+      supabase.from('company_media').select('id,media_type,url,title,thumbnail_url,file_size,duration_seconds,display_order').eq('company_id', companyId).order('display_order', { ascending: true }),
+      supabase.from('company_culture_values').select('id,title,description,display_order').eq('company_id', companyId).order('display_order', { ascending: true }),
+      supabase.from('company_job_defaults').select('salary_type,remote_work,currency').eq('company_id', companyId).maybeSingle(),
+      supabase.from('company_billing').select('billing_email,plan,status,payment_method_status').eq('company_id', companyId).maybeSingle(),
+    ])
+
+    const leaders = leadersRes.data || []
+    const media = mediaRes.data || []
+    const culture_values = cultureRes.data || []
+    const job_defaults = jobDefaultsRes.data || null
+    const billing = billingRes.data || null
+
+    return NextResponse.json({
+      company,
+      leaders,
+      media,
+      culture_values,
+      job_defaults,
+      billing,
+    })
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : String(e)
+    return NextResponse.json({ error: 'Unexpected error', details: message }, { status: 500 })
+  }
 }
 
 export const runtime = 'nodejs'

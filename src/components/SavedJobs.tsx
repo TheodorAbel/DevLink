@@ -29,84 +29,16 @@ import {
 import { Job } from './JobCard';
 import { toast } from 'sonner';
 import { ApplicantCompanyProfileDrawer } from './ApplicantCompanyProfileDrawer';
+import { useSavedJobsList, useSaveJobMutation } from '@/hooks/useSavedJobs';
 
-// Mock saved jobs data
-const savedJobsData: Job[] = [
-  {
-    id: '1',
-    title: 'Senior Frontend Developer',
-    company: 'TechCorp',
-    location: 'San Francisco, CA',
-    salary: '$120K - $160K',
-    type: 'Full-time',
-    postedDate: '2 days ago',
-    description: 'We are looking for an experienced frontend developer to join our team and help build amazing user experiences.',
-    skills: ['React', 'TypeScript', 'Next.js'],
-    featured: true
-  },
-  {
-    id: '2',
-    title: 'UX Designer',
-    company: 'DesignStudio',
-    location: 'Remote',
-    salary: '$80K - $110K',
-    type: 'Full-time',
-    postedDate: '1 day ago',
-    description: 'Join our design team to create intuitive and beautiful user interfaces for our products.',
-    skills: ['Figma', 'Prototyping', 'User Research']
-  },
-  {
-    id: '3',
-    title: 'Product Manager',
-    company: 'StartupXYZ',
-    location: 'New York, NY',
-    salary: '$100K - $140K',
-    type: 'Full-time',
-    postedDate: '3 days ago',
-    description: 'Lead product strategy and work with cross-functional teams to deliver great products.',
-    skills: ['Strategy', 'Analytics', 'Agile']
-  },
-  {
-    id: '4',
-    title: 'Data Scientist',
-    company: 'DataCorp',
-    location: 'Austin, TX',
-    salary: '$110K - $150K',
-    type: 'Full-time',
-    postedDate: '5 days ago',
-    description: 'Analyze complex data sets and build machine learning models to drive business insights.',
-    skills: ['Python', 'ML', 'SQL']
-  },
-  {
-    id: '5',
-    title: 'DevOps Engineer',
-    company: 'CloudFirst',
-    location: 'Denver, CO',
-    salary: '$115K - $145K',
-    type: 'Full-time',
-    postedDate: '1 week ago',
-    description: 'Manage cloud infrastructure and CI/CD pipelines.',
-    skills: ['AWS', 'Docker', 'Kubernetes']
-  },
-  {
-    id: '6',
-    title: 'Mobile Developer',
-    company: 'AppStudio',
-    location: 'Seattle, WA',
-    salary: '$105K - $135K',
-    type: 'Full-time',
-    postedDate: '2 weeks ago',
-    description: 'Build amazing mobile experiences for iOS and Android.',
-    skills: ['React Native', 'Swift', 'Kotlin']
-  }
-];
 
 interface SavedJobsProps {
   onJobSelect?: (jobId: string) => void;
 }
 
 export function SavedJobs({ onJobSelect }: SavedJobsProps) {
-  const [jobs, setJobs] = useState(savedJobsData);
+  const { data: jobs = [], isLoading } = useSavedJobsList();
+  const saveMutation = useSaveJobMutation();
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('newest');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
@@ -161,16 +93,24 @@ export function SavedJobs({ onJobSelect }: SavedJobsProps) {
     }
   });
 
-  const handleRemoveJob = (jobId: string) => {
-    setJobs(jobs.filter(job => job.id !== jobId));
-    setSelectedJobs(selectedJobs.filter(id => id !== jobId));
-    toast.success('Job removed from saved jobs');
+  const handleRemoveJob = async (jobId: string) => {
+    try {
+      await saveMutation.mutateAsync({ jobId, remove: true });
+      setSelectedJobs(selectedJobs.filter(id => id !== jobId));
+      toast.success('Job removed from saved jobs');
+    } catch (e) {
+      toast.error('Failed to remove job');
+    }
   };
 
-  const handleRemoveSelected = () => {
-    setJobs(jobs.filter(job => !selectedJobs.includes(job.id)));
-    setSelectedJobs([]);
-    toast.success(`${selectedJobs.length} jobs removed from saved jobs`);
+  const handleRemoveSelected = async () => {
+    try {
+      await Promise.all(selectedJobs.map((id) => saveMutation.mutateAsync({ jobId: id, remove: true })));
+      setSelectedJobs([]);
+      toast.success('Selected jobs removed');
+    } catch {
+      toast.error('Failed to remove selected jobs');
+    }
   };
 
   const handleSelectJob = (jobId: string) => {
@@ -505,7 +445,7 @@ export function SavedJobs({ onJobSelect }: SavedJobsProps) {
         </motion.div>
 
         {/* Empty State */}
-        {jobs.length === 0 && (
+        {(!isLoading && jobs.length === 0) && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}

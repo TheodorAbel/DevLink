@@ -17,6 +17,7 @@ import { JobDetail } from '@/components/JobDetail';
 import RoleGuard from '@/components/RoleGuard';
 import { SeekerApplications } from '@/components/SeekerApplications';
 import { SaaSNotificationsPage } from '@/components/notifications/SaaSNotificationsPage';
+import { useEnsureConversation } from '@/hooks/useChat';
 
 interface Props {
   initialRecentJobs: Job[];
@@ -27,6 +28,11 @@ function SeekerPageInnerClient({ initialRecentJobs }: Props) {
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [profileTab, setProfileTab] = useState<'personal' | 'skills' | 'experience' | 'education' | 'resume'>('personal');
   const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null);
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const [initialParticipantId, setInitialParticipantId] = useState<string | null>(null);
+  const [initialJobId, setInitialJobId] = useState<string | null>(null);
+  const [initialApplicationId, setInitialApplicationId] = useState<string | null>(null);
+  const ensureConversation = useEnsureConversation();
 
   useEffect(() => {
     const page = searchParams.get('page');
@@ -51,6 +57,12 @@ function SeekerPageInnerClient({ initialRecentJobs }: Props) {
       setCurrentPage('profile');
       return;
     }
+    if (page.startsWith('job-detail:')) {
+      const id = page.split(':')[1] || '';
+      setSelectedJobId(id);
+      setCurrentPage('job-detail');
+      return;
+    }
     if (page === 'applications') {
       setSelectedApplicationId(null);
     }
@@ -69,20 +81,39 @@ function SeekerPageInnerClient({ initialRecentJobs }: Props) {
         return <SavedJobs onJobSelect={(jobId) => console.log('Saved job selected:', jobId)} />;
       case 'applications':
         return selectedApplicationId ? (
-          <ApplicationDetail onBack={() => setSelectedApplicationId(null)} jobId={selectedApplicationId} />
+          <ApplicationDetail 
+            onBack={() => setSelectedApplicationId(null)} 
+            jobId={selectedApplicationId}
+            onSendMessage={async ({ participantId, jobId, applicationId }) => {
+              try {
+                await ensureConversation.mutateAsync({ participantId, jobId, applicationId });
+                setInitialParticipantId(participantId);
+                setInitialJobId(jobId);
+                setInitialApplicationId(applicationId);
+                setCurrentPage('messaging');
+              } catch {}
+            }}
+          />
         ) : (
           <SeekerApplications onOpenApplication={(id) => setSelectedApplicationId(id)} />
         );
       case 'settings':
         return <Settings onBack={() => setCurrentPage('dashboard')} />;
       case 'messaging':
-        return <Messaging onBack={() => setCurrentPage('dashboard')} />;
+        return (
+          <Messaging 
+            onBack={() => setCurrentPage('dashboard')} 
+            initialParticipantId={initialParticipantId ?? undefined}
+            initialJobId={initialJobId ?? undefined}
+            initialApplicationId={initialApplicationId ?? undefined}
+          />
+        );
       case 'analytics':
         return <Analytics onBack={() => setCurrentPage('dashboard')} />;
       case 'recommendations':
         return <JobRecommendations onJobSelect={(jobId) => console.log('Recommended job selected:', jobId)} />;
       case 'job-detail':
-        return <JobDetail onBack={() => setCurrentPage('jobs')} />;
+        return <JobDetail onBack={() => setCurrentPage('dashboard')} jobId={selectedJobId ?? ''} />;
       case 'notifications':
         return (
           <SaaSNotificationsPage 

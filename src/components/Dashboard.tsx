@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ProfileProgress } from './ProfileProgress';
+import { useProfileStepsStatus, useSeekerProfile, useSeekerExperience, useSeekerEducation, useResumes } from '@/hooks/useSeekerProfile';
 import { JobCard, Job } from './JobCard';
 import { NotificationWidget } from './NotificationWidget';
 import { Card, CardHeader, CardTitle, CardContent } from './ui/card';
@@ -22,58 +23,10 @@ import { AnimatedBackground } from './AnimatedBackground';
 import { fetchProfileStepsStatus } from '@/lib/seekerProfile';
 import { supabase } from '@/lib/supabaseClient';
 import { formatDistanceToNow } from 'date-fns';
+import { useSavedJobsList, useSaveJobMutation } from '@/hooks/useSavedJobs';
+import { useQueryClient } from '@tanstack/react-query';
 
-// Mock data
-const recentJobs: Job[] = [
-  {
-    id: '1',
-    title: 'Senior Frontend Developer',
-    company: 'TechCorp',
-    location: 'San Francisco, CA',
-    salary: '$120K - $160K',
-    type: 'Full-time',
-    postedDate: '2 days ago',
-    description: 'We are looking for an experienced frontend developer to join our team and help build amazing user experiences.',
-    skills: ['React', 'TypeScript', 'Next.js'],
-    featured: true
-  },
-  {
-    id: '2',
-    title: 'UX Designer',
-    company: 'DesignStudio',
-    location: 'Remote',
-    salary: '$80K - $110K',
-    type: 'Full-time',
-    postedDate: '1 day ago',
-    description: 'Join our design team to create intuitive and beautiful user interfaces for our products.',
-    skills: ['Figma', 'Prototyping', 'User Research']
-  }
-];
-
-const savedJobs: Job[] = [
-  {
-    id: '3',
-    title: 'Product Manager',
-    company: 'StartupXYZ',
-    location: 'New York, NY',
-    salary: '$100K - $140K',
-    type: 'Full-time',
-    postedDate: '3 days ago',
-    description: 'Lead product strategy and work with cross-functional teams to deliver great products.',
-    skills: ['Strategy', 'Analytics', 'Agile']
-  },
-  {
-    id: '4',
-    title: 'Data Scientist',
-    company: 'DataCorp',
-    location: 'Austin, TX',
-    salary: '$110K - $150K',
-    type: 'Full-time',
-    postedDate: '5 days ago',
-    description: 'Analyze complex data sets and build machine learning models to drive business insights.',
-    skills: ['Python', 'ML', 'SQL']
-  }
-];
+// Mock arrays removed; use serverRecent and saved jobs from DB
 
 const applications = [
   { id: '1', company: 'TechCorp', position: 'Frontend Developer', status: 'interview', date: '2024-01-20' },
@@ -113,9 +66,35 @@ interface DashboardProps {
 }
 
 export function Dashboard({ onPageChange, initialRecentJobs }: DashboardProps) {
-  const [steps, setSteps] = useState<{ basic: boolean; experience: boolean; resume: boolean; contact: boolean }>({ basic: false, experience: false, resume: false, contact: false });
+  const { data: stepsData, isLoading: stepsLoading } = useProfileStepsStatus();
+  const steps = stepsData ?? { basic: false, experience: false, resume: false, contact: false };
+  // Seed cache for instant derived status on subsequent mounts
+  useSeekerProfile();
+  useSeekerExperience();
+  useSeekerEducation();
+  useResumes();
   // Jobs are now provided from the server; keep a local state if needed later
   const [serverJobs] = useState<Job[]>(initialRecentJobs ?? []);
+  const { data: savedJobsList = [] } = useSavedJobsList();
+  const qc = useQueryClient();
+  const saveMutation = useSaveJobMutation();
+  const savedSet = new Set(savedJobsList.map((j) => j.id));
+
+  const toggleSave = async (job: Job) => {
+    const exists = savedSet.has(job.id);
+    const key = ['savedJobs'] as const;
+    const prev = qc.getQueryData<Job[]>(key) || [];
+    qc.setQueryData<Job[]>(key, (old) => {
+      const list = old || [];
+      if (exists) return list.filter((j) => j.id !== job.id);
+      return [{ ...job }, ...list.filter((j) => j.id !== job.id)];
+    });
+    try {
+      await saveMutation.mutateAsync({ jobId: job.id, remove: exists });
+    } catch (e) {
+      qc.setQueryData<Job[]>(key, prev);
+    }
+  };
   const [userName, setUserName] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   type DbJobRow = {
@@ -130,18 +109,7 @@ export function Dashboard({ onPageChange, initialRecentJobs }: DashboardProps) {
     companies?: { company_name?: string | null } | null;
   };
 
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const status = await fetchProfileStepsStatus();
-        if (!mounted) return;
-        setSteps(status);
-      } catch (e) {
-      }
-    })();
-    return () => { mounted = false; };
-  }, []);
+  // Removed legacy effect fetching profile steps (now handled by React Query)
 
   // Client-side jobs fetching removed; jobs are provided from server
 
@@ -318,7 +286,7 @@ export function Dashboard({ onPageChange, initialRecentJobs }: DashboardProps) {
                   </div>
                 </CardHeader>
                 <CardContent className="relative space-y-4">
-                  {[...serverJobs, ...recentJobs].slice(0, 5).map((job, index) => (
+                  {serverJobs.slice(0, 5).map((job, index) => (
                     <motion.div
                       key={job.id}
                       initial={{ opacity: 0, x: -20 }}
@@ -329,8 +297,9 @@ export function Dashboard({ onPageChange, initialRecentJobs }: DashboardProps) {
                         job={job} 
                         variant="compact"
                         onApply={() => console.log('Apply to', job.id)}
-                        onSave={() => console.log('Save', job.id)}
-                        onView={() => onPageChange?.('job-detail')}
+                        onSave={() => toggleSave(job)}
+                        isSaved={savedSet.has(job.id)}
+                        onView={() => onPageChange?.(`job-detail:${job.id}`)}
                       />
                     </motion.div>
                   ))}
@@ -365,8 +334,9 @@ export function Dashboard({ onPageChange, initialRecentJobs }: DashboardProps) {
                           job={job} 
                           variant="compact"
                           onApply={() => console.log('Apply to', job.id)}
-                          onSave={() => console.log('Save', job.id)}
-                          onView={() => onPageChange?.('job-detail')}
+                          onSave={() => toggleSave(job)}
+                          isSaved={savedSet.has(job.id)}
+                          onView={() => onPageChange?.(`job-detail:${job.id}`)}
                         />
                       </motion.div>
                     ))}
@@ -384,12 +354,31 @@ export function Dashboard({ onPageChange, initialRecentJobs }: DashboardProps) {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2 }}
             >
-              <ProfileProgress onStepClick={handleProfileStepClick} completedOverride={{
-                basic: steps.basic,
-                experience: steps.experience,
-                resume: steps.resume,
-                contact: steps.contact,
-              }} />
+              {stepsLoading && (
+                <Card className="relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-br from-gray-50/50 to-gray-100/30" />
+                  <CardHeader className="relative">
+                    <CardTitle>Profile Completion</CardTitle>
+                  </CardHeader>
+                  <CardContent className="relative space-y-3">
+                    <div className="h-2 bg-gray-200 rounded animate-pulse" />
+                    <div className="space-y-2">
+                      <div className="h-8 bg-gray-100 rounded animate-pulse" />
+                      <div className="h-8 bg-gray-100 rounded animate-pulse" />
+                      <div className="h-8 bg-gray-100 rounded animate-pulse" />
+                      <div className="h-8 bg-gray-100 rounded animate-pulse" />
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+              {!stepsLoading && (
+                <ProfileProgress onStepClick={handleProfileStepClick} completedOverride={{
+                  basic: steps.basic,
+                  experience: steps.experience,
+                  resume: steps.resume,
+                  contact: steps.contact,
+                }} />
+              )}
             </motion.div>
 
             {/* Notifications Widget */}
@@ -422,14 +411,14 @@ export function Dashboard({ onPageChange, initialRecentJobs }: DashboardProps) {
                   </div>
                 </CardHeader>
                 <CardContent className="relative space-y-3">
-                  {savedJobs.slice(0, 3).map((job, index) => (
+                  {savedJobsList.slice(0, 3).map((job, index) => (
                     <motion.div
                       key={job.id}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.1 * index }}
                       className="p-3 bg-white/50 rounded-lg border border-gray-100 hover:bg-white/80 transition-all cursor-pointer"
-                      onClick={() => onPageChange?.('job-detail')}
+                      onClick={() => onPageChange?.(`job-detail:${job.id}`)}
                     >
                       <h4 className="font-medium text-sm line-clamp-1">{job.title}</h4>
                       <p className="text-xs text-muted-foreground">{job.company}</p>

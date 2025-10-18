@@ -41,6 +41,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { formatDistanceToNow } from 'date-fns';
 import { useJobs } from '@/hooks/useJobs';
 import { useSavedJobsList, useSaveJobMutation, getMockSaved, toggleMockSaved } from '@/hooks/useSavedJobs';
+import { useQueryClient } from '@tanstack/react-query';
 
 // Mock data - expanded for pagination testing
 const mockJobs: Job[] = [
@@ -214,8 +215,10 @@ export function JobList({ onJobSelect: _onJobSelect }: JobListProps) {
   const { data: jobsData, isLoading: loadingDb, error: jobsError } = useJobs();
   const dbJobs: Job[] = jobsData ?? [];
   // Saved jobs (DB) via query
-  const { data: savedList } = useSavedJobsList();
+  const { data: savedList = [] } = useSavedJobsList();
   const saveMutation = useSaveJobMutation();
+  const qc = useQueryClient();
+  const savedSet = useMemo(() => new Set(savedList.map(j => j.id)), [savedList]);
 
   const dbError = jobsError ? (jobsError instanceof Error ? jobsError.message : 'Failed to load jobs') : null;
 
@@ -299,15 +302,35 @@ export function JobList({ onJobSelect: _onJobSelect }: JobListProps) {
   const handleSaveJob = async (jobId: string) => {
     try {
       if (isDbJob(jobId)) {
-        const isSaved = savedDbIds.has(jobId);
-        // React Query mutation for DB
-        await saveMutation.mutateAsync({ jobId, remove: isSaved });
+        const isSaved = savedSet.has(jobId);
+        const key = ['savedJobs'] as const;
+        const prev = qc.getQueryData<Job[]>(key) || [];
+        const job = combinedJobs.find(j => j.id === jobId);
+        // Optimistic update shared cache so Dashboard and others reflect immediately
+        qc.setQueryData<Job[]>(key, (old) => {
+          const list = old || [];
+          if (isSaved) return list.filter(j => j.id !== jobId);
+          return job ? [{ ...job }, ...list.filter(j => j.id !== jobId)] : list;
+        });
+        // Update local saved set for instant button state
         setSavedDbIds(prev => {
           const next = new Set(prev);
           if (isSaved) next.delete(jobId); else next.add(jobId);
           return next;
         });
-        toast.success(isSaved ? 'Job removed from saved' : 'Job saved');
+        try {
+          await saveMutation.mutateAsync({ jobId, remove: isSaved });
+          toast.success(isSaved ? 'Job removed from saved' : 'Job saved');
+        } catch (e) {
+          // rollback
+          qc.setQueryData<Job[]>(key, prev);
+          setSavedDbIds(prev => {
+            const next = new Set(prev);
+            if (isSaved) next.add(jobId); else next.delete(jobId);
+            return next;
+          });
+          throw e;
+        }
       } else {
         // mock job: toggle in localStorage
         const { next, saved } = toggleMockSaved(combinedJobs, jobId);
