@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { Switch } from "./ui/switch";
 import { toast } from "sonner";
+import { useExpensiveToast } from "@/hooks/useExpensiveToast";
 import { supabase } from "@/lib/supabaseClient";
 
 interface CultureItem { title: string; description?: string }
@@ -76,6 +77,7 @@ interface CompanyProfileData {
 }
 
 export function CompanyProfile() {
+  const xToast = useExpensiveToast();
   const [activeTab, setActiveTab] = useState('edit');
   // Media validation constants
   const MEDIA_LIMITS = {
@@ -190,18 +192,18 @@ export function CompanyProfile() {
     const videoCount = media.filter(m => m.type === 'video').length;
     
     if (imageCount > MEDIA_LIMITS.MAX_IMAGES) {
-      toast.error(`Maximum ${MEDIA_LIMITS.MAX_IMAGES} images allowed`);
+      xToast.warning({ title: `Maximum ${MEDIA_LIMITS.MAX_IMAGES} images allowed` });
       return;
     }
     
     if (videoCount > MEDIA_LIMITS.MAX_VIDEOS) {
-      toast.error(`Maximum ${MEDIA_LIMITS.MAX_VIDEOS} videos allowed`);
+      xToast.warning({ title: `Maximum ${MEDIA_LIMITS.MAX_VIDEOS} videos allowed` });
       return;
     }
     
     const longVideo = media.find(m => m.type === 'video' && (m.duration ?? 0) > MEDIA_LIMITS.MAX_VIDEO_DURATION);
     if (longVideo) {
-      toast.error(`Videos must be under ${Math.floor(MEDIA_LIMITS.MAX_VIDEO_DURATION / 60)} minutes`);
+      xToast.warning({ title: `Videos must be under ${Math.floor(MEDIA_LIMITS.MAX_VIDEO_DURATION / 60)} minutes` });
       return;
     }
     // Build payload mapping UI -> schema
@@ -219,7 +221,7 @@ export function CompanyProfile() {
 
     // required fields sanity (schema requires: company_name, industry, company_size, country, city, description)
     if (!profileData.companyName || !profileData.industry || !profileData.companySize || !city || !profileData.description || !country) {
-      toast.error('Please fill Company Name, Industry, Company Size, Location as "City, Country" and Description');
+      xToast.warning({ title: 'Missing required fields', description: 'Fill Company Name, Industry, Company Size, Location as "City, Country" and Description.' });
       return;
     }
 
@@ -285,7 +287,7 @@ export function CompanyProfile() {
     try {
       const { data: { session }, error: sessErr } = await supabase.auth.getSession();
       if (sessErr || !session?.access_token) {
-        toast.error('Not authenticated');
+        xToast.error({ title: 'Not authenticated', description: 'Please log in again to save your company profile.' });
         return;
       }
 
@@ -303,15 +305,15 @@ export function CompanyProfile() {
       console.log('Save company response:', res.status, out);
       if (!res.ok) {
         console.error('Save company failed:', out);
-        toast.error(out?.details || out?.error || 'Failed to save company profile');
+        xToast.error({ title: 'Failed to save company profile', description: String(out?.details || out?.error || 'Unexpected error') });
         return;
       }
 
-      toast.success('Company profile saved');
+      xToast.success({ title: 'Company profile saved', description: 'Your company information has been updated.' });
     } catch (e: unknown) {
       console.error('Save company exception:', e);
       const message = e instanceof Error ? e.message : 'Error saving company profile';
-      toast.error(message);
+      xToast.error({ title: 'Save failed', description: message });
     }
   };
 
@@ -321,13 +323,13 @@ export function CompanyProfile() {
     
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      toast.error('Please upload an image file');
+      xToast.warning({ title: 'Please upload an image file' });
       return;
     }
     
     // Validate file size (max 2MB for logo)
     if (file.size > 2 * 1024 * 1024) {
-      toast.error('Logo size should be less than 2MB');
+      xToast.warning({ title: 'Logo too large', description: 'Logo size should be less than 2MB.' });
       return;
     }
     
@@ -384,11 +386,11 @@ export function CompanyProfile() {
         media: [...currentMedia, newMedia]
       }));
       
-      toast.success(`${type === 'image' ? 'Image' : 'Video'} uploaded successfully`);
+      xToast.success({ title: `${type === 'image' ? 'Image' : 'Video'} uploaded`, description: 'Media added to your profile.' });
       
     } catch (error) {
       setMediaError(error instanceof Error ? error.message : 'Error uploading media');
-      toast.error(mediaError || 'Error uploading media');
+      xToast.error({ title: 'Upload failed', description: mediaError || 'Error uploading media' });
     } finally {
       setIsUploading(false);
     }

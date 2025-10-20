@@ -70,8 +70,8 @@ export async function GET(req: NextRequest) {
     }
     const userId = userRes.user.id
 
-    // Get user's company_id
-    const { data: userRow, error: userRowErr } = await supabase
+    // Get user's company_id using service role to avoid RLS recursion
+    const { data: userRow, error: userRowErr } = await supabaseAdmin
       .from('users')
       .select('company_id')
       .eq('id', userId)

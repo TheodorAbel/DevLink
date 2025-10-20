@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { X, Plus, Save, Eye, Trash2, HelpCircle, Calendar as CalendarIcon, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useExpensiveToast } from "@/hooks/useExpensiveToast";
+import { ConfirmChangesDialog } from "./ConfirmChangesDialog";
 import { format } from "date-fns";
 import { Calendar } from "./ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
@@ -25,7 +27,7 @@ interface ScreeningQuestion {
   autoFilter: boolean;
 }
 
-interface JobFormData {
+export interface JobFormData {
   title: string;
   location: string;
   jobType: string;
@@ -51,14 +53,22 @@ interface PostJobFormProps {
   onPublish: (data: JobFormData) => void;
   onPreview: (data: JobFormData) => void;
   initialData?: Partial<JobFormData>;
+  jobId?: string; // If provided, we're editing an existing job
+  isEditMode?: boolean; // Visual indicator for edit mode
+  onChange?: (data: Partial<JobFormData>) => void; // Track form changes for drafts
 }
 
 export function PostJobForm({ 
   onSaveDraft, 
   onPublish, 
   onPreview,
-  initialData = {} 
+  initialData = {},
+  jobId,
+  isEditMode = false,
+  onChange
 }: PostJobFormProps) {
+  const xToast = useExpensiveToast();
+  const [isLoadingJob, setIsLoadingJob] = useState(false);
   const [formData, setFormData] = useState<JobFormData>({
     title: '',
     location: '',
@@ -93,6 +103,117 @@ export function PostJobForm({
   });
   const [newOption, setNewOption] = useState('');
   const [isPublishing, setIsPublishing] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [changes, setChanges] = useState<string[]>([]);
+  const [initialFormData, setInitialFormData] = useState<Partial<JobFormData> | null>(null);
+
+  // Load initialData when provided (for edit mode)
+  useEffect(() => {
+    if (initialData && Object.keys(initialData).length > 0) {
+      // Normalize deadline which might arrive as a string/number from API
+      const normalizeDeadline = (val: unknown): Date | null => {
+        if (!val) return null;
+        if (val instanceof Date) return val;
+        const d = new Date(val as any);
+        return isNaN(d.getTime()) ? null : d;
+      };
+      
+      // Map DB job_type format to UI format
+      const jobTypeMap: Record<string, string> = {
+        'full_time': 'full-time',
+        'part_time': 'part-time',
+        'contract': 'contract',
+        'internship': 'internship',
+      };
+      
+      const normalized = {
+        ...initialData,
+        jobType: initialData.jobType ? (jobTypeMap[initialData.jobType] || initialData.jobType) : '',
+        deadline: normalizeDeadline((initialData as any).deadline ?? null),
+      };
+      setFormData(prev => ({ ...prev, ...normalized }));
+      // Store initial data for change tracking
+      if (jobId) {
+        setInitialFormData(normalized);
+      }
+    }
+  }, [initialData, jobId]);
+  
+  // Track changes for edit mode
+  useEffect(() => {
+    if (!jobId || !initialFormData) return;
+    
+    const changesList: string[] = [];
+    
+    if (initialFormData.title !== formData.title) {
+      changesList.push(`Title: "${initialFormData.title}" → "${formData.title}"`);
+    }
+    if (initialFormData.location !== formData.location) {
+      changesList.push(`Location: "${initialFormData.location}" → "${formData.location}"`);
+    }
+    if (initialFormData.jobType !== formData.jobType) {
+      const formatJobType = (type: string) => {
+        const map: Record<string, string> = {
+          'full-time': 'Full-time',
+          'part-time': 'Part-time',
+          'contract': 'Contract',
+          'freelance': 'Freelance',
+          'internship': 'Internship',
+        };
+        return map[type] || type;
+      };
+      changesList.push(`Job Type: "${formatJobType(initialFormData.jobType || '')}" → "${formatJobType(formData.jobType || '')}"`);
+    }
+    if (initialFormData.isRemote !== formData.isRemote) {
+      changesList.push(`Remote: ${initialFormData.isRemote ? 'Yes' : 'No'} → ${formData.isRemote ? 'Yes' : 'No'}`);
+    }
+    if (initialFormData.description !== formData.description) {
+      changesList.push('Description updated');
+    }
+    if (JSON.stringify(initialFormData.skills) !== JSON.stringify(formData.skills)) {
+      changesList.push('Skills changed');
+    }
+    if (JSON.stringify(initialFormData.requirements) !== JSON.stringify(formData.requirements)) {
+      changesList.push('Requirements changed');
+    }
+    if (initialFormData.salaryType !== formData.salaryType ||
+        initialFormData.salary !== formData.salary ||
+        initialFormData.salaryMin !== formData.salaryMin ||
+        initialFormData.salaryMax !== formData.salaryMax ||
+        initialFormData.currency !== formData.currency) {
+      changesList.push('Salary information updated');
+    }
+    
+    if (initialFormData.applicationMethod !== formData.applicationMethod ||
+        initialFormData.applicationUrl !== formData.applicationUrl ||
+        initialFormData.applicationEmail !== formData.applicationEmail) {
+      changesList.push('Application method updated');
+    }
+    
+    if (JSON.stringify(initialFormData.screeningQuestions) !== JSON.stringify(formData.screeningQuestions)) {
+      const count = formData.screeningQuestions?.length || 0;
+      changesList.push(`Screening questions ${count > 0 ? `(${count})` : 'removed'}`);
+    }
+    
+    const time1 = initialFormData.deadline ? (initialFormData.deadline instanceof Date ? initialFormData.deadline.getTime() : new Date(initialFormData.deadline as any).getTime()) : null;
+    const time2 = formData.deadline ? (formData.deadline instanceof Date ? formData.deadline.getTime() : new Date(formData.deadline).getTime()) : null;
+    if (time1 !== time2) {
+      changesList.push('Application deadline changed');
+    }
+    
+    setChanges(changesList);
+  }, [formData, initialFormData, jobId]);
+  
+  // Track form changes for draft saving (debounced to avoid excessive updates)
+  useEffect(() => {
+    if (!onChange) return;
+    
+    const timeoutId = setTimeout(() => {
+      onChange(formData);
+    }, 500); // Debounce by 500ms
+    
+    return () => clearTimeout(timeoutId);
+  }, [formData, onChange]);
 
   const handleAddSkill = () => {
     if (newSkill.trim() && !formData.skills.includes(newSkill.trim())) {
@@ -185,6 +306,20 @@ export function PostJobForm({
   };
 
   const handlePublish = async () => {
+    // If editing via modal (like EditJobModal), delegate to parent's onPublish
+    // The parent will show its own confirmation dialog and handle the update
+    if (jobId && isEditMode) {
+      onPublish(formData);
+      return;
+    }
+    
+    // If editing but NOT in modal mode, show our own confirmation dialog
+    if (jobId) {
+      setShowConfirmDialog(true);
+      return;
+    }
+    
+    // Original publish logic for new jobs
     if (isPublishing) return;
     setIsPublishing(true);
     // Basic required fields
@@ -362,7 +497,7 @@ export function PostJobForm({
       return;
     }
 
-    const jobId = inserted.id as string;
+    const insertedJobId = inserted.id as string;
 
     // Insert screening questions if any
     if (formData.screeningQuestions.length) {
@@ -374,7 +509,7 @@ export function PostJobForm({
       };
 
       const rows = formData.screeningQuestions.map((q, idx) => ({
-        job_id: jobId,
+        job_id: insertedJobId,
         question_text: q.text,
         question_type: qTypeMap[q.type],
         options: q.options && q.options.length ? q.options : null,
@@ -398,11 +533,151 @@ export function PostJobForm({
     setIsPublishing(false);
   };
 
+  const handleUpdateJob = async () => {
+    console.log('[PostJobForm] ===== STARTING UPDATE =====');
+    console.log('[PostJobForm] jobId:', jobId);
+    console.log('[PostJobForm] formData:', formData);
+    setIsPublishing(true);
+    
+    try {
+      console.log('[PostJobForm] Fetching session...');
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        console.error('[PostJobForm] No access token found');
+        xToast.error({ title: 'Not authenticated', description: 'Please log in to update jobs.' });
+        setIsPublishing(false);
+        return;
+      }
+      console.log('[PostJobForm] ✓ Session valid');
+
+      // Build update payload
+      console.log('[PostJobForm] ===== BUILDING PAYLOAD =====');
+      console.log('[PostJobForm] formData.title:', formData.title);
+      console.log('[PostJobForm] formData.description:', formData.description?.substring(0, 50) + '...');
+      console.log('[PostJobForm] formData.location:', formData.location);
+      console.log('[PostJobForm] formData.jobType:', formData.jobType);
+      console.log('[PostJobForm] formData.salaryType:', formData.salaryType);
+      
+      const jobTypeMap: Record<string, string> = {
+        'full-time': 'full_time',
+        'part-time': 'part_time',
+        'contract': 'contract',
+        'freelance': 'contract',
+        'internship': 'internship',
+      };
+
+      const salaryTypeMap: Record<'range' | 'fixed' | 'custom', 'range' | 'fixed' | 'competitive'> = {
+        range: 'range',
+        fixed: 'fixed',
+        custom: 'competitive',
+      };
+
+      // Safely serialize deadline to ISO if valid
+      const deadlineIso = (() => {
+        const v = formData.deadline as unknown;
+        if (!v) return null;
+        if (v instanceof Date) return isNaN(v.getTime()) ? null : v.toISOString();
+        const d = new Date(v as any);
+        return isNaN(d.getTime()) ? null : d.toISOString();
+      })();
+
+      const payload = {
+        title: formData.title,
+        description: formData.description,
+        location: formData.location,
+        job_type: jobTypeMap[formData.jobType] || formData.jobType,
+        is_remote: formData.isRemote,
+        salary_type: salaryTypeMap[formData.salaryType],
+        salary_min: formData.salaryType === 'range' ? Number(formData.salaryMin) || null : null,
+        salary_max: formData.salaryType === 'range' ? Number(formData.salaryMax) || null : null,
+        salary_fixed: formData.salaryType === 'fixed' ? Number(formData.salary) || null : null,
+        salary_currency: formData.currency,
+        application_deadline: deadlineIso,
+        requirements: formData.requirements?.length ? formData.requirements : null,
+        skills_required: formData.skills?.length ? formData.skills : null,
+        status: 'active',
+      };
+      
+      console.log('[PostJobForm] ===== PAYLOAD BUILT =====');
+      console.log('[PostJobForm] Payload:', JSON.stringify(payload, null, 2));
+      console.log('[PostJobForm] Payload keys:', Object.keys(payload));
+      console.log('[PostJobForm] Payload field values:');
+      Object.entries(payload).forEach(([key, value]) => {
+        console.log(`[PostJobForm]   - ${key}:`, typeof value === 'string' && value.length > 50 ? value.substring(0, 50) + '...' : value);
+      });
+
+      console.log('[PostJobForm] ===== SENDING REQUEST =====');
+      console.log('[PostJobForm] URL:', `/api/jobs/${jobId}`);
+      console.log('[PostJobForm] Method: PUT');
+      
+      const res = await fetch(`/api/jobs/${jobId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      console.log('[PostJobForm] ===== RESPONSE RECEIVED =====');
+      console.log('[PostJobForm] Status:', res.status);
+      console.log('[PostJobForm] Status Text:', res.statusText);
+      console.log('[PostJobForm] OK:', res.ok);
+
+      if (!res.ok) {
+        console.error('[PostJobForm] ===== REQUEST FAILED =====');
+        let errBody: any = null;
+        const ct = res.headers.get('content-type') || '';
+        try {
+          if (ct.includes('application/json')) {
+            errBody = await res.json();
+          } else {
+            const text = await res.text();
+            errBody = { error: text };
+          }
+        } catch (parseErr) {
+          console.error('[PostJobForm] Failed to parse error response as JSON:', parseErr);
+          errBody = { error: 'Request failed', details: `Status ${res.status} ${res.statusText}` };
+        }
+        console.error('[PostJobForm] Error response:', JSON.stringify(errBody, null, 2));
+        xToast.error({ title: 'Failed to update job', description: errBody?.error || 'Could not update job.' });
+        setIsPublishing(false);
+        return;
+      }
+
+      const result = await res.json();
+      console.log('[PostJobForm] ===== SUCCESS =====');
+      console.log('[PostJobForm] Success response:', JSON.stringify(result, null, 2));
+      
+      xToast.success({ 
+        title: 'Job updated', 
+        description: 'The job posting has been updated successfully.',
+        duration: 4000
+      });
+      
+      setShowConfirmDialog(false);
+      
+      // Call the onPublish callback to trigger navigation
+      onPublish(formData);
+    } catch (e) {
+      console.error('[PostJobForm] ===== EXCEPTION CAUGHT =====');
+      const msg = e instanceof Error ? e.message : 'Unknown error';
+      console.error('[PostJobForm] Exception type:', e?.constructor?.name);
+      console.error('[PostJobForm] Exception message:', msg);
+      console.error('[PostJobForm] Exception stack:', e instanceof Error ? e.stack : 'N/A');
+      console.error('[PostJobForm] Full exception:', e);
+      xToast.error({ title: 'Update failed', description: msg });
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
   return (
     <TooltipProvider>
-      <div className="max-w-4xl mx-auto space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <h1 className="text-2xl font-medium">Post New Job</h1>
+      <div className={isEditMode ? 'space-y-6 pb-20' : 'max-w-4xl mx-auto space-y-6'}>
+        {!isEditMode && (
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <h1 className="text-2xl font-medium">{jobId ? 'Edit Job' : 'Post New Job'}</h1>
           <div className="flex items-center gap-2">
             <Button variant="outline" onClick={() => onPreview(formData)}>
               <Eye className="h-4 w-4 mr-2" />
@@ -412,18 +687,50 @@ export function PostJobForm({
               <Save className="h-4 w-4 mr-2" />
               Save Draft
             </Button>
-            <Button onClick={handlePublish} disabled={isPublishing}>
+            <Button 
+              onClick={handlePublish} 
+              disabled={isPublishing}
+            >
               {isPublishing ? (
                 <span className="flex items-center gap-2">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Publishing...
+                  {jobId ? 'Updating...' : 'Publishing...'}
                 </span>
               ) : (
-                'Publish Job'
+                jobId ? 'Save Changes' : 'Publish Job'
               )}
             </Button>
           </div>
         </div>
+        )}
+        
+        {/* Edit Mode: Sticky Footer - Hidden when used in EditJobModal (buttons are in header) */}
+        {/* {isEditMode && (
+          <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur border-t p-4 flex items-center justify-end gap-3 z-50">
+            <Button 
+              variant="outline" 
+              onClick={() => onPreview(formData)}
+              disabled={isPublishing}
+            >
+              <Eye className="h-4 w-4 mr-2" />
+              Preview
+            </Button>
+            <Button 
+              onClick={handlePublish} 
+              disabled={isPublishing}
+              className="bg-yellow-600 hover:bg-yellow-700"
+            >
+              {isPublishing ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Saving Changes...
+                </span>
+              ) : (
+                'Save Changes'
+              )}
+            </Button>
+          </div>
+        )} */}
 
       <Card>
         <CardHeader>
@@ -456,10 +763,11 @@ export function PostJobForm({
             <div className="space-y-2">
               <Label htmlFor="jobType">Job Type *</Label>
               <Select 
+                name="jobType"
                 value={formData.jobType} 
                 onValueChange={(value) => setFormData(prev => ({ ...prev, jobType: value }))}
               >
-                <SelectTrigger>
+                <SelectTrigger id="jobType">
                   <SelectValue placeholder="Select job type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -497,8 +805,9 @@ export function PostJobForm({
 
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Salary Type</Label>
+              <Label htmlFor="salaryType">Salary Type</Label>
               <Select 
+                name="salaryType"
                 value={formData.salaryType} 
                 onValueChange={(value: 'range' | 'fixed' | 'custom') => {
                   setFormData(prev => ({
@@ -513,7 +822,7 @@ export function PostJobForm({
                   }));
                 }}
               >
-                <SelectTrigger>
+                <SelectTrigger id="salaryType">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -527,7 +836,9 @@ export function PostJobForm({
             {formData.salaryType === 'range' && (
               <div className="grid grid-cols-3 gap-2">
                 <div>
+                  <Label htmlFor="salaryMin" className="sr-only">Minimum Salary</Label>
                   <Input
+                    id="salaryMin"
                     value={formData.salaryMin}
                     onChange={(e) => setFormData(prev => ({ ...prev, salaryMin: e.target.value }))}
                     placeholder="Min salary"
@@ -535,7 +846,9 @@ export function PostJobForm({
                   />
                 </div>
                 <div>
+                  <Label htmlFor="salaryMax" className="sr-only">Maximum Salary</Label>
                   <Input
+                    id="salaryMax"
                     value={formData.salaryMax}
                     onChange={(e) => setFormData(prev => ({ ...prev, salaryMax: e.target.value }))}
                     placeholder="Max salary"
@@ -543,11 +856,13 @@ export function PostJobForm({
                   />
                 </div>
                 <div>
+                  <Label htmlFor="currencyRange" className="sr-only">Currency</Label>
                   <Select 
+                    name="currencyRange"
                     value={formData.currency} 
                     onValueChange={(value) => setFormData(prev => ({ ...prev, currency: value }))}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger id="currencyRange">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -563,7 +878,9 @@ export function PostJobForm({
             {formData.salaryType === 'fixed' && (
               <div className="grid grid-cols-2 gap-2">
                 <div>
+                  <Label htmlFor="salaryFixed" className="sr-only">Salary Amount</Label>
                   <Input
+                    id="salaryFixed"
                     value={formData.salary}
                     onChange={(e) => setFormData(prev => ({ ...prev, salary: e.target.value }))}
                     placeholder="Salary amount"
@@ -571,11 +888,13 @@ export function PostJobForm({
                   />
                 </div>
                 <div>
+                  <Label htmlFor="currencyFixed" className="sr-only">Currency</Label>
                   <Select 
+                    name="currencyFixed"
                     value={formData.currency} 
                     onValueChange={(value) => setFormData(prev => ({ ...prev, currency: value }))}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger id="currencyFixed">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -592,8 +911,9 @@ export function PostJobForm({
 
             {formData.salaryType === 'custom' && (
               <div className="space-y-2">
-                <Label>Custom Salary Message</Label>
+                <Label htmlFor="customSalary">Custom Salary Message</Label>
                 <Input
+                  id="customSalary"
                   value={formData.customSalaryMessage}
                   onChange={(e) => setFormData(prev => ({ ...prev, customSalaryMessage: e.target.value }))}
                   placeholder="e.g., Competitive salary, Negotiable based on experience"
@@ -657,9 +977,10 @@ export function PostJobForm({
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label>Required Skills</Label>
+            <Label htmlFor="newSkill">Required Skills</Label>
             <div className="flex gap-2">
               <Input
+                id="newSkill"
                 value={newSkill}
                 onChange={(e) => setNewSkill(e.target.value)}
                 placeholder="Add a skill..."
@@ -693,9 +1014,10 @@ export function PostJobForm({
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label>Job Requirements</Label>
+            <Label htmlFor="newRequirement">Job Requirements</Label>
             <div className="flex gap-2">
               <Input
+                id="newRequirement"
                 value={newRequirement}
                 onChange={(e) => setNewRequirement(e.target.value)}
                 placeholder="Add a requirement..."
@@ -732,6 +1054,7 @@ export function PostJobForm({
             <div className="space-y-2">
               <Label htmlFor="applicationMethod">How should candidates apply?</Label>
               <Select
+                name="applicationMethod"
                 value={formData.applicationMethod}
                 onValueChange={(value: 'platform' | 'website' | 'email') =>
                   setFormData(prev => ({
@@ -742,7 +1065,7 @@ export function PostJobForm({
                   }))
                 }
               >
-                <SelectTrigger>
+                <SelectTrigger id="applicationMethod">
                   <SelectValue placeholder="Select application method" />
                 </SelectTrigger>
                 <SelectContent>
@@ -840,8 +1163,9 @@ export function PostJobForm({
             <h4 className="font-medium">Add New Question</h4>
             
             <div className="space-y-2">
-              <Label>Question Text</Label>
+              <Label htmlFor="questionText">Question Text</Label>
               <Input
+                id="questionText"
                 value={currentQuestion.text}
                 onChange={(e) => setCurrentQuestion(prev => ({ ...prev, text: e.target.value }))}
                 placeholder="e.g., Do you have 3+ years of React experience?"
@@ -849,8 +1173,9 @@ export function PostJobForm({
             </div>
 
             <div className="space-y-2">
-              <Label>Answer Type</Label>
+              <Label htmlFor="answerType">Answer Type</Label>
               <Select 
+                name="answerType"
                 value={currentQuestion.type} 
                 onValueChange={(value: 'yes-no' | 'multiple-choice' | 'checkbox' | 'short-answer') => 
                   setCurrentQuestion(prev => ({ 
@@ -860,7 +1185,7 @@ export function PostJobForm({
                   }))
                 }
               >
-                <SelectTrigger>
+                <SelectTrigger id="answerType">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -874,9 +1199,10 @@ export function PostJobForm({
 
             {(currentQuestion.type === 'multiple-choice' || currentQuestion.type === 'checkbox') && (
               <div className="space-y-2">
-                <Label>Answer Options</Label>
+                <Label htmlFor="newOption">Answer Options</Label>
                 <div className="flex gap-2">
                   <Input
+                    id="newOption"
                     value={newOption}
                     onChange={(e) => setNewOption(e.target.value)}
                     placeholder="Add an option..."
@@ -949,6 +1275,17 @@ export function PostJobForm({
       </Card>
 
       </div>
+      
+      {/* Confirmation Dialog for Edit Mode - Only show when NOT in modal (EditJobModal has its own) */}
+      {jobId && !isEditMode && (
+        <ConfirmChangesDialog
+          isOpen={showConfirmDialog}
+          onClose={() => setShowConfirmDialog(false)}
+          onConfirm={handleUpdateJob}
+          changes={changes}
+          isLoading={isPublishing}
+        />
+      )}
     </TooltipProvider>
   );
 }

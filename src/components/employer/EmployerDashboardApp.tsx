@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { EditJobModal } from "./EditJobModal";
 import { motion } from "framer-motion";
 import { MobileHeader } from "@/components/employer/MobileHeader";
 import { NavigationDrawer } from "@/components/employer/NavigationDrawer";
@@ -32,6 +33,10 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { toast, Toaster } from "sonner";
+import { useExpensiveToast } from "@/hooks/useExpensiveToast";
+import { useCompany } from "@/hooks/employer/useCompany";
+import { useCompanyCompletion } from "@/hooks/employer/useCompanyCompletion";
+import { useEmployerJobs } from "@/hooks/employer/useEmployerJobs";
 
 // Types
 type JobStatus = "active" | "paused" | "draft";
@@ -47,6 +52,7 @@ type Job = {
   status: JobStatus;
   isBoosted?: boolean;
   postedAt: string;
+  updatedAt?: string;
 };
 
 type Applicant = {
@@ -171,7 +177,92 @@ export default function EmployerDashboardApp() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [activeView, setActiveView] = useState("dashboard");
   const [isLoading, setIsLoading] = useState(true);
-  const [jobs, setJobs] = useState<Job[]>(mockJobs);
+  const [editingJobId, setEditingJobId] = useState<string | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+  const { data: companyBundle, isLoading: companyLoading } = useCompany();
+  const completion = useCompanyCompletion();
+  const { data: employerJobs = [], isLoading: jobsLoading } = useEmployerJobs(30);
+  const expensiveToast = useExpensiveToast();
+
+  const companyName = companyBundle?.company?.company_name || "Your Company";
+
+  const allCompletionLabels = useMemo(
+    () => [
+      "Logo",
+      "Cover image",
+      "Company name",
+      "Website",
+      "Industry",
+      "Company size",
+      "Founded year",
+      "Country",
+      "City",
+      "Address",
+      "Tagline",
+      "Description",
+      "Hiring process",
+      "Culture text",
+      "Specialties",
+      "Benefits",
+      "LinkedIn",
+      "Contact (email or phone)",
+      "At least 1 leader",
+      "At least 1 media item",
+      "Job posting defaults",
+      "Billing setup",
+    ],
+    []
+  );
+
+  const completedStepLabels = useMemo(() => {
+    const missing = new Set(completion.missing || []);
+    return allCompletionLabels.filter((l) => !missing.has(l));
+  }, [completion.missing, allCompletionLabels]);
+
+  const jobsMapped: Job[] = useMemo(() => {
+    const formatTimeAgo = (dateStr: string | null) => {
+      if (!dateStr) return "";
+      const date = new Date(dateStr);
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
+      
+      if (diffMins < 60) return `${diffMins}m ago`;
+      if (diffHours < 24) return `${diffHours}h ago`;
+      if (diffDays < 7) return `${diffDays}d ago`;
+      return date.toLocaleDateString();
+    };
+
+    return (employerJobs || []).map((j) => ({
+      id: j.id,
+      title: j.title,
+      company: companyName,
+      location: j.location || "",
+      jobType: j.job_type || "",
+      salary: j.salary_type === "fixed"
+        ? `${j.salary_fixed ?? "-"} ${j.salary_currency ?? ""}`
+        : j.salary_type === "range"
+        ? `${j.salary_min ?? "-"}-${j.salary_max ?? "-"} ${j.salary_currency ?? ""}`
+        : j.salary_currency || "Competitive",
+      applicants: j.applications_count ?? 0,
+      views: j.views_count ?? 0,
+      status: ((j.status as any) ?? "draft") as JobStatus,
+      isBoosted: false,
+      postedAt: formatTimeAgo(j.published_at || j.created_at),
+      updatedAt: j.updated_at ? formatTimeAgo(j.updated_at) : undefined,
+    }));
+  }, [employerJobs, companyName]);
+
+  const stepsPercentage = useMemo(() => {
+    const total = allCompletionLabels.length || 1;
+    const done = completedStepLabels.length || 0;
+    return Math.min(100, Math.max(0, Math.round((done / total) * 100)));
+  }, [completedStepLabels, allCompletionLabels]);
+
+  
 
   // Simulate loading
   useEffect(() => {
@@ -180,45 +271,24 @@ export default function EmployerDashboardApp() {
   }, []);
 
   const handleJobAction = (action: string, jobId: string) => {
-    setJobs((prevJobs) =>
-      prevJobs.map((job) => {
-        if (job.id === jobId) {
-          switch (action) {
-            case "pause":
-              return {
-                ...job,
-                status: (job.status === "paused" ? "active" : "paused") as JobStatus,
-              };
-            case "boost":
-              return { ...job, isBoosted: !job.isBoosted };
-            case "delete":
-              return job; // Would actually remove from array
-            default:
-              return job;
-          }
-        }
-        return job;
-      })
-    );
-
     switch (action) {
       case "edit":
-        toast.success("Redirecting to edit job...");
+        setEditingJobId(jobId);
+        setIsEditModalOpen(true);
         break;
       case "pause":
-        toast.success("Job status updated");
+        expensiveToast.success({ title: "Job status updated", description: "The job visibility has been toggled." });
         break;
       case "boost":
-        toast.success("Job boost updated");
+        expensiveToast.info({ title: "Boost updated", description: "Job promotion settings have been adjusted." });
         break;
       case "delete":
-        toast.success("Job deleted successfully");
-        setJobs((prevJobs) => prevJobs.filter((job) => job.id !== jobId));
+        expensiveToast.warning({ title: "Job deleted", description: "The posting has been removed from your listings." });
         break;
     }
   };
 
-  if (isLoading) {
+  if (isLoading || companyLoading || jobsLoading) {
     return (
       <div className="min-h-screen bg-background">
         <DashboardSkeleton />
@@ -234,16 +304,16 @@ export default function EmployerDashboardApp() {
             <PostJobForm
               onSaveDraft={(data) => {
                 console.log("Saving draft:", data);
-                toast.success("Job saved as draft");
+                expensiveToast.info({ title: "Draft saved", description: "You can return to publish when ready." });
               }}
               onPublish={(data) => {
                 console.log("Publishing job:", data);
-                toast.success("Job published successfully!");
-                setActiveView("dashboard");
+                expensiveToast.success({ title: "Job published", description: "Your job is now live and visible to seekers." });
+                setActiveView("job-management");
               }}
               onPreview={(data) => {
                 console.log("Previewing job:", data);
-                toast.info("Opening preview...");
+                expensiveToast.info({ title: "Opening preview", description: "See how your posting will appear to candidates." });
               }}
             />
           </div>
@@ -260,7 +330,7 @@ export default function EmployerDashboardApp() {
         return (
           <div className="p-4">
             <JobList
-              jobs={jobs}
+              jobs={jobsMapped}
               onCreateJob={() => setActiveView("post-job")}
               onEditJob={(id) => handleJobAction("edit", id)}
               onPauseJob={(id) => handleJobAction("pause", id)}
@@ -303,9 +373,9 @@ export default function EmployerDashboardApp() {
           <div className="space-y-6 p-4">
             {/* Progress Bar */}
             <ProgressBar
-              percentage={75}
-              completedSteps={["Company Info", "Logo Upload", "Payment Setup"]}
-              totalSteps={4}
+              percentage={stepsPercentage}
+              completedSteps={completedStepLabels}
+              totalSteps={allCompletionLabels.length}
             />
 
             {/* Stats */}
@@ -325,7 +395,7 @@ export default function EmployerDashboardApp() {
               </div>
 
               <div className="space-y-4">
-                {jobs.slice(0, 3).map((job) => (
+                {jobsMapped.slice(0, 3).map((job) => (
                   <motion.div
                     key={job.id}
                     initial={{ opacity: 0, y: 20 }}
@@ -371,11 +441,21 @@ export default function EmployerDashboardApp() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="h-screen bg-background overflow-hidden">
       <Toaster position="top-right" />
+      
+      {/* Edit Job Modal */}
+      <EditJobModal
+        jobId={editingJobId}
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setEditingJobId(null);
+        }}
+      />
 
       {/* Mobile Layout */}
-      <div className="lg:hidden">
+      <div className="lg:hidden flex flex-col h-screen">
         <MobileHeader
           onMenuClick={() => setIsDrawerOpen(true)}
           companyName="TechCorp"
@@ -392,14 +472,14 @@ export default function EmployerDashboardApp() {
           userEmail="admin@techcorp.com"
         />
 
-        <main className="pb-20">{renderContent()}</main>
+        <main className="flex-1 overflow-y-auto pb-20">{renderContent()}</main>
       </div>
 
       {/* Desktop Layout */}
-      <div className="hidden lg:flex min-h-screen">
+      <div className="hidden lg:flex h-screen">
         {/* Left Sidebar */}
         <div
-          className={`border-r border-border bg-card transition-all duration-300 ease-in-out ${
+          className={`border-r border-border bg-card transition-all duration-300 ease-in-out flex flex-col ${
             isSidebarCollapsed ? "w-20" : "w-64"
           }`}
         >
@@ -429,7 +509,7 @@ export default function EmployerDashboardApp() {
             </Button>
           </div>
 
-          <nav className="p-2 space-y-1">
+          <nav className="p-2 space-y-1 overflow-y-auto flex-1">
             {[
               { id: "dashboard", label: "Dashboard", icon: TrendingUp },
               { id: "post-job", label: "Post Job", icon: Plus },
@@ -462,12 +542,12 @@ export default function EmployerDashboardApp() {
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 flex">
-          <main className="flex-1 overflow-auto">{renderContent()}</main>
+        <div className="flex-1 flex overflow-hidden">
+          <main className="flex-1 overflow-y-auto">{renderContent()}</main>
 
           {/* Right Sidebar - Contextual Info */}
           {activeView === "dashboard" && (
-            <div className="w-80 border-l border-border p-6 space-y-6">
+            <div className="w-80 border-l border-border p-6 space-y-6 overflow-y-auto">
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base">Quick Stats</CardTitle>
