@@ -11,7 +11,6 @@ import {
   MessageSquare, 
   BarChart, 
   Settings, 
-  LogOut,
   Briefcase,
   ChevronLeft,
   ChevronRight
@@ -128,22 +127,6 @@ export function NavigationDrawer({
               );
             })}
           </nav>
-          
-          {/* Footer */}
-          <div className="absolute bottom-0 left-0 right-0 p-2">
-            <Separator className="mb-2" />
-            <Button 
-              variant="ghost" 
-              className={classNames(
-                "w-full h-12 text-destructive hover:text-destructive hover:bg-destructive/10",
-                isCollapsed ? "justify-center px-0" : "justify-start gap-3 px-4"
-              )}
-              title={isCollapsed ? "Logout" : undefined}
-            >
-              <LogOut className="h-5 w-5 flex-shrink-0" />
-              {!isCollapsed && <span>Logout</span>}
-            </Button>
-          </div>
         </div>
       </SheetContent>
     </Sheet>

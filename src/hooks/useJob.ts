@@ -28,6 +28,7 @@ export type DbJob = {
     website_url: string | null;
     benefits: string[] | null;
     headquarters: string | null;
+    logo_url: string | null;
   } | null;
 };
 
@@ -41,7 +42,7 @@ export function useJob(jobId: string | undefined) {
         .select(`
           id, title, location, job_type, salary_type, salary_min, salary_max, salary_fixed, salary_currency, custom_salary_message,
           description, requirements, responsibilities, skills_required, application_deadline, published_at, company_id,
-          companies:company_id ( company_name, description, company_size, industry, founded_year, website_url, benefits, headquarters )
+          companies:company_id ( company_name, description, company_size, industry, founded_year, website_url, benefits, headquarters, logo_url )
         `)
         .eq('id', jobId)
         .maybeSingle();

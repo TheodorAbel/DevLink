@@ -10,7 +10,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useCompany } from "@/hooks/employer/useCompany";
 import { useDraftStorage } from "@/hooks/useDraftStorage";
 import { supabase } from "@/lib/supabaseClient";
-import { toast } from "sonner";
+import { useExpensiveToast } from "@/hooks/useExpensiveToast";
 import { Button } from "./ui/button";
 
 interface EditJobModalProps {
@@ -21,6 +21,7 @@ interface EditJobModalProps {
 
 export function EditJobModal({ jobId, isOpen, onClose }: EditJobModalProps) {
   const queryClient = useQueryClient();
+  const xToast = useExpensiveToast();
   const { data: job, isLoading, error } = useJobById(jobId);
   const { data: companyBundle } = useCompany();
   const [jobTitle, setJobTitle] = useState<string>("");
@@ -210,7 +211,7 @@ export function EditJobModal({ jobId, isOpen, onClose }: EditJobModalProps) {
     
     if (!draftData || !jobId) {
       console.error('[EditJobModal] Missing data - draftData:', !!draftData, 'jobId:', jobId);
-      toast.error('Missing job data');
+      xToast.error({ title: 'Missing data', description: 'Unable to save job. Please try again.' });
       return;
     }
     
@@ -224,7 +225,7 @@ export function EditJobModal({ jobId, isOpen, onClose }: EditJobModalProps) {
       if (sessionError) {
         console.error('[EditJobModal] ===== SESSION ERROR =====');
         console.error('[EditJobModal] Session error:', sessionError);
-        toast.error('Authentication error. Please refresh and try again.');
+        xToast.error({ title: 'Authentication error', description: 'Please refresh the page and try again.' });
         setIsSaving(false);
         return;
       }
@@ -232,7 +233,7 @@ export function EditJobModal({ jobId, isOpen, onClose }: EditJobModalProps) {
       if (!session?.access_token) {
         console.error('[EditJobModal] ===== NO ACCESS TOKEN =====');
         console.error('[EditJobModal] Session:', session);
-        toast.error('Not authenticated. Please log in again.');
+        xToast.error({ title: 'Not authenticated', description: 'Please log in again to continue.' });
         setIsSaving(false);
         return;
       }
@@ -294,7 +295,7 @@ export function EditJobModal({ jobId, isOpen, onClose }: EditJobModalProps) {
         console.error('[EditJobModal] - title:', payload.title);
         console.error('[EditJobModal] - description length:', payload.description?.length);
         console.error('[EditJobModal] - location:', payload.location);
-        toast.error('Title, description, and location are required');
+        xToast.error({ title: 'Missing required fields', description: 'Please fill in title, description, and location.' });
         setIsSaving(false);
         return;
       }
@@ -324,7 +325,10 @@ export function EditJobModal({ jobId, isOpen, onClose }: EditJobModalProps) {
         console.error('[EditJobModal] Error response:', JSON.stringify(err, null, 2));
         console.error('[EditJobModal] Error details:', err.details);
         console.error('[EditJobModal] Error message:', err.error);
-        toast.error(err.details || err.error || `Failed to update job (${res.status})`);
+        xToast.error({ 
+          title: 'Failed to update job', 
+          description: err.details || err.error || `Request failed with status ${res.status}` 
+        });
         setIsSaving(false);
         return;
       }
@@ -335,7 +339,11 @@ export function EditJobModal({ jobId, isOpen, onClose }: EditJobModalProps) {
 
       // Success!
       console.log('[EditJobModal] Closing dialog and cleaning up...');
-      toast.success('Job updated successfully!', { duration: 4000 });
+      xToast.success({ 
+        title: 'Job updated successfully!',
+        description: 'Your changes have been saved and are now live.',
+        duration: 3000
+      });
       setShowConfirmDialog(false);
       setIsSaving(false);
       handleSuccess();
@@ -346,7 +354,7 @@ export function EditJobModal({ jobId, isOpen, onClose }: EditJobModalProps) {
       console.error('[EditJobModal] Exception message:', msg);
       console.error('[EditJobModal] Exception stack:', e instanceof Error ? e.stack : 'N/A');
       console.error('[EditJobModal] Full exception:', e);
-      toast.error(`Update failed: ${msg}`);
+      xToast.error({ title: 'Update failed', description: msg });
       setIsSaving(false);
     }
   };

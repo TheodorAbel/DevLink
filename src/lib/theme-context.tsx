@@ -29,35 +29,17 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     // Remove previous theme classes
     root.classList.remove('light', 'dark');
 
-    if (theme === 'system') {
-      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-      root.classList.add(systemTheme);
-      setActualTheme(systemTheme);
+    // System mode now behaves as light mode
+    if (theme === 'system' || theme === 'light') {
+      root.classList.add('light');
+      setActualTheme('light');
     } else {
-      root.classList.add(theme);
-      setActualTheme(theme);
+      root.classList.add('dark');
+      setActualTheme('dark');
     }
 
     // Save to localStorage
     localStorage.setItem('theme', theme);
-  }, [theme]);
-
-  // Listen for system theme changes when theme is set to 'system'
-  useEffect(() => {
-    if (theme === 'system') {
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      
-      const handleChange = (e: MediaQueryListEvent) => {
-        const systemTheme = e.matches ? 'dark' : 'light';
-        const root = window.document.documentElement;
-        root.classList.remove('light', 'dark');
-        root.classList.add(systemTheme);
-        setActualTheme(systemTheme);
-      };
-
-      mediaQuery.addEventListener('change', handleChange);
-      return () => mediaQuery.removeEventListener('change', handleChange);
-    }
   }, [theme]);
 
   return (

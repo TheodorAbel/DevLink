@@ -20,6 +20,8 @@ import { DashboardSkeleton } from "@/components/employer/LoadingStates";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Plus,
   Briefcase,
@@ -31,12 +33,17 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  LogOut,
+  User,
 } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import { useExpensiveToast } from "@/hooks/useExpensiveToast";
 import { useCompany } from "@/hooks/employer/useCompany";
 import { useCompanyCompletion } from "@/hooks/employer/useCompanyCompletion";
 import { useEmployerJobs } from "@/hooks/employer/useEmployerJobs";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { signOut } from "@/lib/auth";
+import { useRouter } from "next/navigation";
 
 // Types
 type JobStatus = "active" | "paused" | "draft";
@@ -177,6 +184,9 @@ export default function EmployerDashboardApp() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [activeView, setActiveView] = useState("dashboard");
   const [isLoading, setIsLoading] = useState(true);
+  const [showSignOutDialog, setShowSignOutDialog] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
+  const router = useRouter();
   const [editingJobId, setEditingJobId] = useState<string | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
@@ -285,6 +295,21 @@ export default function EmployerDashboardApp() {
       case "delete":
         expensiveToast.warning({ title: "Job deleted", description: "The posting has been removed from your listings." });
         break;
+    }
+  };
+
+  const handleSignOut = async () => {
+    setIsSigningOut(true);
+    try {
+      await signOut();
+      toast.success('Signed out successfully');
+      router.push('/login');
+    } catch (error) {
+      console.error('Sign out error:', error);
+      toast.error('Failed to sign out. Please try again.');
+    } finally {
+      setIsSigningOut(false);
+      setShowSignOutDialog(false);
     }
   };
 
@@ -455,7 +480,7 @@ export default function EmployerDashboardApp() {
       />
 
       {/* Mobile Layout */}
-      <div className="lg:hidden flex flex-col h-screen">
+      <div className="lg:hidden flex flex-col h-screen bg-background">
         <MobileHeader
           onMenuClick={() => setIsDrawerOpen(true)}
           companyName="TechCorp"
@@ -472,33 +497,63 @@ export default function EmployerDashboardApp() {
           userEmail="admin@techcorp.com"
         />
 
-        <main className="flex-1 overflow-y-auto pb-20">{renderContent()}</main>
+        <main className="flex-1 overflow-y-auto pb-20 bg-background">{renderContent()}</main>
       </div>
 
       {/* Desktop Layout */}
-      <div className="hidden lg:flex h-screen">
+      <div className="hidden lg:flex h-screen bg-background">
         {/* Left Sidebar */}
         <div
-          className={`border-r border-border bg-card transition-all duration-300 ease-in-out flex flex-col ${
+          className={`border-r bg-card transition-all duration-300 ease-in-out flex flex-col ${
             isSidebarCollapsed ? "w-20" : "w-64"
           }`}
         >
-          <div className="p-6 border-b border-border relative">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
-                <Briefcase className="h-5 w-5 text-primary-foreground" />
-              </div>
-              {!isSidebarCollapsed && (
-                <div className="overflow-hidden">
-                  <h1 className="font-medium truncate">TechCorp</h1>
-                  <p className="text-sm text-muted-foreground truncate">Employer Dashboard</p>
+          <div className="p-6 border-b relative">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center gap-3 w-full hover:bg-accent rounded-lg p-2 -m-2 transition-colors">
+                  <Avatar className="h-10 w-10 flex-shrink-0">
+                    <AvatarImage src="" alt="Company" />
+                    <AvatarFallback className="bg-gradient-to-br from-blue-600 to-purple-600 dark:from-blue-500 dark:to-purple-500 text-white font-semibold">
+                      {companyName.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  {!isSidebarCollapsed && (
+                    <div className="overflow-hidden text-left flex-1">
+                      <h1 className="font-semibold truncate text-gray-900 dark:text-white text-sm">{companyName}</h1>
+                      <p className="text-xs text-gray-600 dark:text-gray-400 truncate">Employer Dashboard</p>
+                    </div>
+                  )}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-56">
+                <div className="px-2 py-1.5">
+                  <p className="text-sm font-medium">{companyName}</p>
+                  <p className="text-xs text-muted-foreground">Employer Account</p>
                 </div>
-              )}
-            </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setActiveView('company-profile')}>
+                  <Building className="h-4 w-4 mr-2" />
+                  Company Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setActiveView('settings')}>
+                  <Settings className="h-4 w-4 mr-2" />
+                  Settings
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  onClick={() => setShowSignOutDialog(true)}
+                  className="text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400 focus:bg-red-50 dark:focus:bg-red-900/20"
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Sign Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button
               variant="ghost"
               size="icon"
-              className="absolute -right-4 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full border bg-background shadow-md hover:bg-accent"
+              className="absolute -right-4 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full border bg-card shadow-lg hover:bg-accent"
               onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
             >
               {isSidebarCollapsed ? (
@@ -526,15 +581,19 @@ export default function EmployerDashboardApp() {
               return (
                 <Button
                   key={item.id}
-                  variant={isActive ? "secondary" : "ghost"}
-                  className={`w-full h-12 transition-all duration-200 ${
-                    isSidebarCollapsed ? "justify-center px-0" : "justify-start gap-3 px-4"
+                  variant="ghost"
+                  className={`w-full h-11 transition-all duration-200 font-medium ${
+                    isSidebarCollapsed ? "justify-center px-0" : "justify-start gap-3 px-3"
+                  } ${
+                    isActive 
+                      ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 border-l-2 border-blue-600 dark:border-blue-500' 
+                      : 'hover:bg-accent'
                   }`}
                   onClick={() => setActiveView(item.id)}
                   title={isSidebarCollapsed ? item.label : undefined}
                 >
                   <Icon className="h-5 w-5 flex-shrink-0" />
-                  {!isSidebarCollapsed && <span className="truncate">{item.label}</span>}
+                  {!isSidebarCollapsed && <span className="truncate text-sm">{item.label}</span>}
                 </Button>
               );
             })}
@@ -542,12 +601,12 @@ export default function EmployerDashboardApp() {
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 flex overflow-hidden">
-          <main className="flex-1 overflow-y-auto">{renderContent()}</main>
+        <div className="flex-1 flex overflow-hidden bg-background">
+          <main className="flex-1 overflow-y-auto bg-background">{renderContent()}</main>
 
           {/* Right Sidebar - Contextual Info */}
           {activeView === "dashboard" && (
-            <div className="w-80 border-l border-border p-6 space-y-6 overflow-y-auto">
+            <div className="w-80 border-l bg-card p-6 space-y-6 overflow-y-auto">
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base">Quick Stats</CardTitle>
@@ -591,6 +650,51 @@ export default function EmployerDashboardApp() {
           )}
         </div>
       </div>
+
+      {/* Sign Out Confirmation Dialog */}
+      <AlertDialog open={showSignOutDialog} onOpenChange={setShowSignOutDialog}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <div className="flex items-center gap-4 mb-2">
+              <div className="h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
+                <LogOut className="h-6 w-6 text-red-600 dark:text-red-400" />
+              </div>
+              <div>
+                <AlertDialogTitle className="text-xl">Sign Out</AlertDialogTitle>
+                <AlertDialogDescription className="text-sm mt-1">
+                  Are you sure you want to sign out?
+                </AlertDialogDescription>
+              </div>
+            </div>
+          </AlertDialogHeader>
+          
+          <div className="py-4 border-t">
+            <p className="text-sm text-muted-foreground">
+              You'll need to sign in again to access your employer dashboard and manage your job postings.
+            </p>
+          </div>
+
+          <AlertDialogFooter className="gap-2 sm:gap-2">
+            <AlertDialogCancel disabled={isSigningOut} className="mt-0">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleSignOut}
+              disabled={isSigningOut}
+              className="bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700"
+            >
+              {isSigningOut ? (
+                <>
+                  <span className="mr-2">Signing out...</span>
+                  <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                </>
+              ) : (
+                'Sign Out'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

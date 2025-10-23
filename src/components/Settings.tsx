@@ -39,6 +39,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Slider } from './ui/slider';
 import { toast } from 'sonner';
+import { useJobPostingDefaults } from '../hooks/useJobPostingDefaults';
 
 interface SettingsProps {
   onBack?: () => void;
@@ -46,6 +47,7 @@ interface SettingsProps {
 
 export function Settings({ onBack: _onBack }: SettingsProps) {
   const { theme, setTheme } = useTheme();
+  const { defaults: jobDefaults, saveDefaults } = useJobPostingDefaults();
   void _onBack;
   
   const [settings, setSettings] = useState({
@@ -231,6 +233,79 @@ export function Settings({ onBack: _onBack }: SettingsProps) {
                         checked={settings.defaultCoverLetter}
                         onCheckedChange={(checked) => updateTopLevelSetting('defaultCoverLetter', checked)}
                       />
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+
+              {/* Job Posting Defaults (for Employers) */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15 }}
+              >
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <BarChart3 className="h-5 w-5" />
+                      Job Posting Defaults
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="space-y-3">
+                      <Label>Default Salary Type</Label>
+                      <Select
+                        value={jobDefaults.salaryType}
+                        onValueChange={(value) => {
+                          saveDefaults({ salaryType: value as 'range' | 'fixed' | 'custom' });
+                          toast.success('Default salary type updated');
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="range">Salary Range</SelectItem>
+                          <SelectItem value="fixed">Fixed Salary</SelectItem>
+                          <SelectItem value="custom">Custom Message</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-sm text-muted-foreground">
+                        This will be pre-selected when creating new job postings
+                      </p>
+                    </div>
+
+                    <Separator />
+
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-1">
+                        <Label>Default Remote Work</Label>
+                        <p className="text-sm text-muted-foreground">
+                          Enable remote work option by default
+                        </p>
+                      </div>
+                      <Switch
+                        checked={jobDefaults.remoteWork}
+                        onCheckedChange={(checked) => {
+                          saveDefaults({ remoteWork: checked });
+                          toast.success('Default remote work setting updated');
+                        }}
+                      />
+                    </div>
+
+                    <Separator />
+
+                    <div className="space-y-3">
+                      <Label>Custom Salary Message</Label>
+                      <Input
+                        value={jobDefaults.customSalaryMessage}
+                        onChange={(e) => saveDefaults({ customSalaryMessage: e.target.value })}
+                        onBlur={() => toast.success('Custom salary message updated')}
+                        placeholder="e.g., Competitive salary based on experience"
+                      />
+                      <p className="text-sm text-muted-foreground">
+                        Default message when custom salary type is selected
+                      </p>
                     </div>
                   </CardContent>
                 </Card>

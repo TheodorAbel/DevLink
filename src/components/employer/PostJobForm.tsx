@@ -649,11 +649,14 @@ export function PostJobForm({
       console.log('[PostJobForm] ===== SUCCESS =====');
       console.log('[PostJobForm] Success response:', JSON.stringify(result, null, 2));
       
-      xToast.success({ 
-        title: 'Job updated', 
-        description: 'The job posting has been updated successfully.',
-        duration: 4000
-      });
+      // Only show toast when NOT in edit mode (EditJobModal handles its own toast)
+      if (!isEditMode) {
+        xToast.success({ 
+          title: 'Job updated', 
+          description: 'The job posting has been updated successfully.',
+          duration: 3000
+        });
+      }
       
       setShowConfirmDialog(false);
       

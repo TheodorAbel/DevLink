@@ -71,82 +71,83 @@ export function JobCard({
   return (
     <Card className="group hover:shadow-md transition-all duration-200 hover:-translate-y-1">
       <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          {/* Three-dot menu positioned at top-left */}
-          <div className="flex items-start gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-7 w-7 -mt-1">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
-                <DropdownMenuItem onClick={() => onEdit?.(id)}>
-                  <Edit className="h-4 w-4 mr-2" />
-                  Edit
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onPause?.(id)}>
-                  <Pause className="h-4 w-4 mr-2" />
-                  {status === 'paused' ? 'Resume' : 'Pause'}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onBoost?.(id)}>
-                  <Zap className="h-4 w-4 mr-2" />
-                  {isBoosted ? 'Stop Boosting' : 'Boost Job'}
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem 
-                  onClick={() => onDelete?.(id)}
-                  className="text-destructive focus:text-destructive"
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            
-            <Avatar className="h-10 w-10">
+        <div className="flex items-start justify-between gap-3">
+          {/* Left side: Avatar + Job Info */}
+          <div className="flex items-start gap-3 flex-1 min-w-0">
+            <Avatar className="h-10 w-10 flex-shrink-0">
               <AvatarImage src="" alt={`${company} logo`} />
               <AvatarFallback>{company.charAt(0).toUpperCase()}</AvatarFallback>
             </Avatar>
-          </div>
-          
-          <div className="flex-1 min-w-0 ml-3">
-              <div className="flex items-center gap-2 mb-1">
-                <h3 className="font-medium truncate">{title}</h3>
+            
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                <h3 className="font-medium text-base break-words">{title}</h3>
                 {isBoosted && (
-                  <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+                  <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 flex-shrink-0">
                     <Zap className="h-3 w-3 mr-1" />
                     Boosted
                   </Badge>
                 )}
               </div>
-              <p className="text-sm text-muted-foreground mb-2">{company}</p>
-              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground mb-2 break-words">{company}</p>
+              
+              {/* Status badge below company name */}
+              <Badge 
+                variant="outline" 
+                className={`text-xs mb-2 ${statusStyle.color}`}
+              >
+                {statusStyle.label}
+              </Badge>
+              
+              <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
                 <div className="flex items-center gap-1">
-                  <MapPin className="h-3 w-3" />
-                  {location}
+                  <MapPin className="h-3 w-3 flex-shrink-0" />
+                  <span className="truncate">{location}</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
-                  {postedAt}
+                  <Clock className="h-3 w-3 flex-shrink-0" />
+                  <span className="truncate">{postedAt}</span>
                 </div>
                 {updatedAt && updatedAt !== postedAt && (
                   <div className="flex items-center gap-1 text-xs">
-                    <RefreshCw className="h-3 w-3" />
-                    <span title="Last edited">Edited {updatedAt}</span>
+                    <RefreshCw className="h-3 w-3 flex-shrink-0" />
+                    <span title="Last edited" className="truncate">Edited {updatedAt}</span>
                   </div>
                 )}
               </div>
             </div>
           </div>
           
-          {/* Status badge on the right */}
-          <Badge 
-            variant="outline" 
-            className={`text-xs ${statusStyle.color}`}
-          >
-            {statusStyle.label}
-          </Badge>
+          {/* Right side: Three-dot menu */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => onEdit?.(id)}>
+                <Edit className="h-4 w-4 mr-2" />
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onPause?.(id)}>
+                <Pause className="h-4 w-4 mr-2" />
+                {status === 'paused' ? 'Resume' : 'Pause'}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onBoost?.(id)}>
+                <Zap className="h-4 w-4 mr-2" />
+                {isBoosted ? 'Stop Boosting' : 'Boost Job'}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                onClick={() => onDelete?.(id)}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </CardHeader>
       

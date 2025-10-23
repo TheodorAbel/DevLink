@@ -1,5 +1,5 @@
 /* eslint-disable @next/next/no-img-element */
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -78,6 +78,7 @@ interface CompanyProfileData {
 
 export function CompanyProfile() {
   const xToast = useExpensiveToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState('edit');
   // Media validation constants
   const MEDIA_LIMITS = {
@@ -317,7 +318,7 @@ export function CompanyProfile() {
     }
   };
 
-  const handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
     
@@ -333,11 +334,51 @@ export function CompanyProfile() {
       return;
     }
     
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setProfileData(prev => ({ ...prev, logo: e.target?.result as string }));
-    };
-    reader.readAsDataURL(file);
+    try {
+      setIsUploading(true);
+      
+      // Get current user
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        xToast.error({ title: 'Not authenticated', description: 'Please log in to upload a logo.' });
+        return;
+      }
+      
+      // Create a unique file name
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+      const filePath = `company-logos/${fileName}`;
+      
+      // Upload to Supabase Storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('company-assets')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+      
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        xToast.error({ title: 'Upload failed', description: uploadError.message });
+        return;
+      }
+      
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('company-assets')
+        .getPublicUrl(filePath);
+      
+      // Update profile data with the public URL
+      setProfileData(prev => ({ ...prev, logo: publicUrl }));
+      xToast.success({ title: 'Logo uploaded', description: 'Your company logo has been uploaded successfully.' });
+      
+    } catch (error) {
+      console.error('Logo upload error:', error);
+      const message = error instanceof Error ? error.message : 'Failed to upload logo';
+      xToast.error({ title: 'Upload failed', description: message });
+    } finally {
+      setIsUploading(false);
+    }
   };
   
   const handleMediaUpload = async (type: 'image' | 'video', file: File) => {
@@ -952,15 +993,30 @@ export function CompanyProfile() {
                 </Avatar>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="logo-upload" className="cursor-pointer">
-                    <Button variant="outline" asChild>
-                      <span>
-                        <Upload className="h-4 w-4 mr-2" />
-                        Upload Logo
-                      </span>
+                  <div>
+                    <input 
+                      ref={fileInputRef}
+                      type="file" 
+                      accept="image/*" 
+                      className="hidden" 
+                      onChange={handleLogoUpload}
+                      disabled={isUploading}
+                      id="company-logo-upload"
+                    />
+                    <Button 
+                      variant="outline" 
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        fileInputRef.current?.click();
+                      }}
+                      disabled={isUploading}
+                      type="button"
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      {isUploading ? 'Uploading...' : 'Upload Logo'}
                     </Button>
-                  </Label>
-                  <Input id="logo-upload" type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+                  </div>
                   <p className="text-xs text-muted-foreground">Recommended: Square image, at least 200x200px</p>
                 </div>
               </div>

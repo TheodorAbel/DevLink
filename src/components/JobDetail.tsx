@@ -84,6 +84,7 @@ export function JobDetail({ onBack, autoOpenApply = false, jobId }: JobDetailPro
       requirements: dbJob.requirements || [],
       skills: dbJob.skills_required || [],
       benefits: dbJob.companies?.benefits || [],
+      companyLogo: dbJob.companies?.logo_url || null,
       companyInfo: {
         name: dbJob.companies?.company_name || 'Company',
         size: dbJob.companies?.company_size || '—',
@@ -112,6 +113,7 @@ export function JobDetail({ onBack, autoOpenApply = false, jobId }: JobDetailPro
     requirements: [],
     skills: [],
     benefits: [],
+    companyLogo: null as string | null,
     companyInfo: {
       name: 'Company',
       size: '—',
@@ -226,10 +228,18 @@ export function JobDetail({ onBack, autoOpenApply = false, jobId }: JobDetailPro
               <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
                 <div className="flex gap-4">
                   <div
-                    className="w-16 h-16 bg-gradient-to-br from-blue-100 to-purple-100 rounded-xl flex items-center justify-center flex-shrink-0 hover:ring-2 hover:ring-blue-200 cursor-pointer"
+                    className="w-16 h-16 bg-gradient-to-br from-blue-100 to-purple-100 rounded-xl flex items-center justify-center flex-shrink-0 hover:ring-2 hover:ring-blue-200 cursor-pointer overflow-hidden"
                     onClick={openCompany}
                   >
-                    <Building2 className="h-8 w-8 text-blue-600" />
+                    {currentJob.companyLogo ? (
+                      <img 
+                        src={currentJob.companyLogo} 
+                        alt={`${currentJob.company} logo`}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <Building2 className="h-8 w-8 text-blue-600" />
+                    )}
                   </div>
                   
                   <div className="flex-1">
