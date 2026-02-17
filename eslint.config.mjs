@@ -2,6 +2,7 @@ import js from "@eslint/js";
 import globals from "globals";
 import tseslint from "typescript-eslint";
 import pluginReact from "eslint-plugin-react";
+import pluginReactHooks from "eslint-plugin-react-hooks";
 import nextPlugin from "@next/eslint-plugin-next"; // ✅ Add this
 import { defineConfig } from "eslint/config";
 
@@ -21,10 +22,12 @@ export default defineConfig([
     plugins: {
       js,
       react: pluginReact,
+      "react-hooks": pluginReactHooks,
       "@next/next": nextPlugin, // ✅ Register plugin
     },
     rules: {
       ...pluginReact.configs.recommended.rules,
+      ...pluginReactHooks.configs.recommended.rules,
       ...nextPlugin.configs.recommended.rules, // ✅ Apply Next.js rules
       "react/react-in-jsx-scope": "off",
       "react/jsx-uses-react": "off",

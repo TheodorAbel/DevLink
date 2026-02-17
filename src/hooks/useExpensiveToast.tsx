@@ -14,7 +14,9 @@ type ShowOptions = {
   duration?: number;
 };
 
-const variantStyles: Record<Variant, { ring: string; pill: string; Icon: any }> = {
+type IconComponent = React.ComponentType<{ className?: string }>;
+
+const variantStyles: Record<Variant, { ring: string; pill: string; Icon: IconComponent }> = {
   success: {
     ring: "from-emerald-500/20 to-green-600/20",
     pill: "from-emerald-500 to-green-600",

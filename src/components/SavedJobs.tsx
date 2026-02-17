@@ -98,7 +98,7 @@ export function SavedJobs({ onJobSelect }: SavedJobsProps) {
       await saveMutation.mutateAsync({ jobId, remove: true });
       setSelectedJobs(selectedJobs.filter(id => id !== jobId));
       toast.success('Job removed from saved jobs');
-    } catch (e) {
+    } catch {
       toast.error('Failed to remove job');
     }
   };

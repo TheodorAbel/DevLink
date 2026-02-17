@@ -5,16 +5,11 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Switch } from './ui/switch';
-import { useTheme } from '../lib/theme-context';
 import { 
-  Palette,
   Shield,
   Eye,
   User,
   Calendar,
-  Moon,
-  Sun,
-  Monitor,
   Mail,
   Smartphone,
   BellRing,
@@ -46,7 +41,6 @@ interface SettingsProps {
 }
 
 export function Settings({ onBack: _onBack }: SettingsProps) {
-  const { theme, setTheme } = useTheme();
   const { defaults: jobDefaults, saveDefaults } = useJobPostingDefaults();
   void _onBack;
   
@@ -156,43 +150,6 @@ export function Settings({ onBack: _onBack }: SettingsProps) {
           {/* General Settings */}
           <TabsContent value="general">
             <div className="space-y-6">
-              {/* Theme Settings */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-              >
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Palette className="h-5 w-5" />
-                      Appearance
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="space-y-3">
-                      <Label>Theme</Label>
-                      <div className="grid grid-cols-3 gap-3">
-                        {[
-                          { value: 'light', label: 'Light', icon: Sun },
-                          { value: 'dark', label: 'Dark', icon: Moon },
-                          { value: 'system', label: 'System', icon: Monitor }
-                        ].map(({ value, label, icon: Icon }) => (
-                          <Button
-                            key={value}
-                            variant={theme === value ? 'default' : 'outline'}
-                            onClick={() => setTheme(value as 'light' | 'dark' | 'system')}
-                            className="h-16 flex-col gap-2"
-                          >
-                            <Icon className="h-5 w-5" />
-                            {label}
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-
               {/* Application Preferences */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}

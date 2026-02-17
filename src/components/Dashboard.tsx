@@ -20,9 +20,7 @@ import {
 } from 'lucide-react';
 
 import { AnimatedBackground } from './AnimatedBackground';
-import { fetchProfileStepsStatus } from '@/lib/seekerProfile';
 import { supabase } from '@/lib/supabaseClient';
-import { formatDistanceToNow } from 'date-fns';
 import { useSavedJobsList, useSaveJobMutation } from '@/hooks/useSavedJobs';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -91,23 +89,12 @@ export function Dashboard({ onPageChange, initialRecentJobs }: DashboardProps) {
     });
     try {
       await saveMutation.mutateAsync({ jobId: job.id, remove: exists });
-    } catch (e) {
+    } catch {
       qc.setQueryData<Job[]>(key, prev);
     }
   };
   const [userName, setUserName] = useState<string | null>(null);
-  const [userEmail, setUserEmail] = useState<string | null>(null);
-  type DbJobRow = {
-    id: string;
-    title: string;
-    location: string | null;
-    job_type: string | null;
-    description: string | null;
-    skills_required: string[] | null;
-    published_at: string | null;
-    company_id: string;
-    companies?: { company_name?: string | null } | null;
-  };
+  const [, setUserEmail] = useState<string | null>(null);
 
   // Removed legacy effect fetching profile steps (now handled by React Query)
 
@@ -117,7 +104,7 @@ export function Dashboard({ onPageChange, initialRecentJobs }: DashboardProps) {
   useEffect(() => {
     let isMounted = true;
 
-    const applyFromAuth = (u: any | null) => {
+    const applyFromAuth = (u: { email?: string; user_metadata?: { name?: string } } | null) => {
       if (!isMounted) return;
       const email = u?.email ?? null;
       const metaName = u?.user_metadata?.name as string | undefined;
@@ -159,7 +146,7 @@ export function Dashboard({ onPageChange, initialRecentJobs }: DashboardProps) {
     return () => {
       isMounted = false;
       cleanupPromise.then((cleanup) => {
-        try { (cleanup as any)?.(); } catch {}
+        try { cleanup?.(); } catch {}
       });
     };
   }, []);

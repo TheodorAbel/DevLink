@@ -11,13 +11,25 @@ export default async function SeekerPage() {
   const host = h.get('host') ?? 'localhost:3000';
   const apiUrl = `${proto}://${host}/api/jobs/recent`;
   const res = await fetch(apiUrl, { cache: 'no-store' });
-  let recent: any[] = [];
+  let recent: unknown[] = [];
   if (res.ok) {
     const json = await res.json();
     recent = json?.jobs ?? [];
   }
 
-  const initialRecentJobs: Job[] = (recent as any[]).map((j) => {
+  interface RawJob {
+    id: string;
+    title: string;
+    company_id: string;
+    location: string | null;
+    job_type: string | null;
+    description: string | null;
+    skills_required: string[] | null;
+    published_at: string | null;
+    companies?: { company_name?: string };
+  }
+  
+  const initialRecentJobs: Job[] = (recent as RawJob[]).map((j) => {
     const typeMap: Record<string, string> = {
       full_time: 'Full-time',
       part_time: 'Part-time',

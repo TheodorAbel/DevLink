@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useTheme } from "@/lib/theme-context";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -14,7 +13,6 @@ import {
   User, 
   Lock, 
   Bell, 
-  Palette, 
   Eye, 
   Shield, 
   MessageSquare, 
@@ -22,9 +20,6 @@ import {
   Plus,
   Trash,
   Edit,
-  Monitor,
-  Sun,
-  Moon,
   ArrowLeft
 } from "lucide-react";
 import { toast } from "sonner";
@@ -36,7 +31,6 @@ interface EmployerSettingsProps {
 export function EmployerSettings({ onBack }: EmployerSettingsProps) {
   const [emailVerified] = useState(true);
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
-  const { theme, setTheme } = useTheme();
   const [notifications, setNotifications] = useState({
     email: true,
     push: true,
@@ -164,44 +158,6 @@ export function EmployerSettings({ onBack }: EmployerSettingsProps) {
                       }
                     />
                   </div>
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Theme */}
-              <div className="space-y-4">
-                <h3 className="font-medium flex items-center gap-2">
-                  <Palette className="h-4 w-4" />
-                  Theme Preferences
-                </h3>
-                <div>
-                  <Label>Appearance</Label>
-                  <Select value={theme} onValueChange={setTheme}>
-                    <SelectTrigger className="mt-2">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="light">
-                        <div className="flex items-center gap-2">
-                          <Sun className="h-4 w-4" />
-                          Light
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="dark">
-                        <div className="flex items-center gap-2">
-                          <Moon className="h-4 w-4" />
-                          Dark
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="system">
-                        <div className="flex items-center gap-2">
-                          <Monitor className="h-4 w-4" />
-                          System
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
                 </div>
               </div>
 
@@ -339,19 +295,6 @@ export function EmployerSettings({ onBack }: EmployerSettingsProps) {
                   <CardTitle className="text-lg">Theme & Accessibility</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div>
-                    <Label>Theme</Label>
-                    <Select value={theme} onValueChange={setTheme}>
-                      <SelectTrigger className="mt-2">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="light">Light</SelectItem>
-                        <SelectItem value="dark">Dark</SelectItem>
-                        <SelectItem value="system">System</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
                   <div className="flex items-center justify-between">
                     <Label>High Contrast</Label>
                     <Switch

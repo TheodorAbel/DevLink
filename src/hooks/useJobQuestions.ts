@@ -37,8 +37,9 @@ export function useJobQuestions(jobId: string | undefined, enabled: boolean) {
         else if (qt.includes('multiple')) type = 'multiple-choice';
         else if (qt.includes('checkbox')) type = 'checkbox';
         const optsRaw = q.options || [];
+        interface RawOption { id?: string | number; label?: string; value?: string }
         const opts: ScreeningOption[] = Array.isArray(optsRaw)
-          ? (optsRaw as any[]).map((o: any, i: number) => {
+          ? (optsRaw as (string | RawOption)[]).map((o: string | RawOption, i: number) => {
               if (typeof o === 'string') return { id: String(i), label: o, value: o };
               return { id: String(o.id ?? i), label: String(o.label ?? o.value ?? ''), value: String(o.value ?? o.label ?? '') };
             })

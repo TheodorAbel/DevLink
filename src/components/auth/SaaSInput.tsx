@@ -1,6 +1,5 @@
 "use client";
 
-import { motion } from "framer-motion";
 import { useState } from "react";
 
 interface SaaSInputProps {
@@ -22,17 +21,11 @@ export function SaaSInput({
   placeholder,
   icon,
   required = false,
-  delay = 0,
 }: SaaSInputProps) {
   const [isFocused, setIsFocused] = useState(false);
 
   return (
-    <motion.div
-      className="space-y-2"
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, delay }}
-    >
+    <div className="space-y-2">
       <label className="block text-sm font-medium text-slate-300">
         {label}
         {required && <span className="text-cyan-400 ml-1">*</span>}
@@ -43,7 +36,7 @@ export function SaaSInput({
         }`}>
           {icon}
         </div>
-        <motion.input
+        <input
           type={type}
           value={value}
           onChange={(e) => onChange(e.target.value)}
@@ -56,9 +49,8 @@ export function SaaSInput({
               ? "border-indigo-400 bg-slate-800/80 shadow-lg shadow-indigo-400/20"
               : "border-slate-700 bg-slate-800/60 hover:border-slate-600"
           }`}
-          whileFocus={{ scale: 1.01 }}
         />
       </div>
-    </motion.div>
+    </div>
   );
 }

@@ -1,16 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
 import { signUp } from "@/lib/auth";
 import { ROLES, Role } from "@/lib/roles";
 import toast from "react-hot-toast";
 import { User, Mail, Lock, ArrowRight, Sparkles, ShieldCheck } from "lucide-react";
-import dynamic from "next/dynamic";
-const SaaSBackground = dynamic(
-  () => import("@/components/auth/SaaSBackground").then(m => m.SaaSBackground),
-  { ssr: false }
-);
 import { SaaSInput } from "@/components/auth/SaaSInput";
 import { RoleSelector, roleOptions } from "@/components/auth/RoleSelector";
 import Link from "next/link";
@@ -64,7 +58,10 @@ const handleSubmit = async (e: React.FormEvent) => {
 
   return (
     <>
-      <SaaSBackground />
+      <div className="fixed inset-0 -z-10 overflow-hidden bg-slate-950">
+        <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-slate-800 to-indigo-900" />
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/50 via-transparent to-slate-900/30" />
+      </div>
       
       <div className="min-h-screen flex flex-col">
         {/* Header */}
@@ -81,12 +78,7 @@ const handleSubmit = async (e: React.FormEvent) => {
 
         {/* Main Content */}
         <main className="flex-1 flex items-center justify-center px-6 py-12">
-          <motion.div
-            className="w-full max-w-md"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
+          <div className="w-full max-w-md">
             {/* Dark Glassmorphism Card */}
             <div className="relative backdrop-blur-xl bg-slate-900/60 rounded-2xl shadow-2xl border border-indigo-500/30 p-8">
               {/* Glow effect */}
@@ -95,22 +87,12 @@ const handleSubmit = async (e: React.FormEvent) => {
               <div className="relative space-y-8">
                 {/* Heading */}
                 <div className="text-center space-y-2">
-                  <motion.h1
-                    className="text-3xl font-bold tracking-tight bg-gradient-to-r from-indigo-400 to-cyan-300 bg-clip-text text-transparent"
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 }}
-                  >
+                  <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-indigo-400 to-cyan-300 bg-clip-text text-transparent">
                     Create your DevLink account
-                  </motion.h1>
-                  <motion.p
-                    className="text-slate-400"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.2 }}
-                  >
+                  </h1>
+                  <p className="text-slate-400">
                     Join thousands of seekers and employers connecting on DevLink
-                  </motion.p>
+                  </p>
                 </div>
 
                 {/* Form */}
@@ -148,28 +130,17 @@ const handleSubmit = async (e: React.FormEvent) => {
                     delay={0.4}
                   />
 
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.45 }}
-                  >
-                    <RoleSelector
-                      value={role}
-                      onChange={setRole}
-                      roles={roleOptions}
-                    />
-                  </motion.div>
+                  <RoleSelector
+                    value={role}
+                    onChange={setRole}
+                    roles={roleOptions}
+                  />
 
                   {/* Submit Button */}
-                  <motion.button
+                  <button
                     type="submit"
                     disabled={loading}
                     className="w-full py-4 px-6 rounded-xl bg-gradient-to-r from-indigo-500 via-blue-600 to-cyan-500 text-white font-semibold shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 group transition-all duration-200"
-                    whileHover={{ scale: loading ? 1 : 1.02 }}
-                    whileTap={{ scale: loading ? 1 : 0.98 }}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.5, type: "spring", stiffness: 300 }}
                   >
                     {loading ? (
                       <>
@@ -182,16 +153,11 @@ const handleSubmit = async (e: React.FormEvent) => {
                         <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                       </>
                     )}
-                  </motion.button>
+                  </button>
                 </form>
 
                 {/* Footer Links */}
-                <motion.div
-                  className="text-center space-y-3"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.6 }}
-                >
+                <div className="text-center space-y-3">
                   <div className="flex items-center justify-center gap-2 text-sm text-slate-400">
                     <ShieldCheck className="w-4 h-4 text-cyan-400" />
                     <span>Your data is safe with DevLink</span>
@@ -208,20 +174,15 @@ const handleSubmit = async (e: React.FormEvent) => {
                   <p className="text-xs text-slate-500">
                     After signing up, check your email to verify your account.
                   </p>
-                </motion.div>
+                </div>
               </div>
             </div>
 
             {/* Trust Signal */}
-            <motion.p
-              className="text-center text-sm text-slate-500 mt-6"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.7 }}
-            >
+            <p className="text-center text-sm text-slate-500 mt-6">
               Trusted by 10,000+ job seekers and companies
-            </motion.p>
-          </motion.div>
+            </p>
+          </div>
         </main>
 
         {/* Footer */}

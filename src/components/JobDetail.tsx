@@ -3,28 +3,27 @@
 import React, { useMemo, useState } from 'react';
 
 import { motion } from 'framer-motion';
-import { Card, CardHeader, CardTitle, CardContent } from './ui/card';
-import { Button } from './ui/button';
 import { Badge } from './ui/badge';
+import { Button } from './ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { 
   ArrowLeft,
   MapPin, 
   DollarSign, 
   Clock,
-  Users,
   Building2,
   CheckCircle,
-  ExternalLink
+  ExternalLink,
+  Users
 } from 'lucide-react';
 
 import { AnimatedBackground } from './AnimatedBackground';
 import { toast } from 'sonner';
+import { formatDistanceToNow } from 'date-fns';
 
 import { ApplySheet } from './ApplySheet';
 import { CompanyProfileView } from './company/CompanyProfileView';
-import { supabase } from '@/lib/supabaseClient';
-import { formatDistanceToNow } from 'date-fns';
-import { useJob, useHasApplied, type DbJob } from '@/hooks/useJob';
+import { useJob, useHasApplied } from '@/hooks/useJob';
 
 interface JobDetailProps {
   onBack: () => void;
@@ -232,6 +231,7 @@ export function JobDetail({ onBack, autoOpenApply = false, jobId }: JobDetailPro
                     onClick={openCompany}
                   >
                     {currentJob.companyLogo ? (
+                      // eslint-disable-next-line @next/next/no-img-element
                       <img 
                         src={currentJob.companyLogo} 
                         alt={`${currentJob.company} logo`}

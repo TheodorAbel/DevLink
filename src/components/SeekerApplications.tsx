@@ -16,8 +16,6 @@ interface SeekerApplicationsProps {
   onOpenApplication: (applicationId: string) => void;
 }
 
-type RawApplication = { id: string; job_id: string; status: ApplicationItem['status']; created_at: string };
-
 function statusBadge(status: ApplicationItem['status']) {
   switch (status) {
     case 'interview':

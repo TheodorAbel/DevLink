@@ -44,11 +44,6 @@ export type Resume = {
   created_at?: string;
 };
 
-async function getToken() {
-  const { data } = await supabase.auth.getSession();
-  return data.session?.access_token;
-}
-
 // Profile
 export function useSeekerProfile() {
   return useQuery({

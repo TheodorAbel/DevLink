@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
     if (error) return NextResponse.json({ error: 'Failed to load messages' }, { status: 500 })
 
     // Map DB columns to client shape
-    const mapped = (messages || []).map((m: any) => ({
+    const mapped = (messages || []).map((m: { id: string; conversation_id: string; sender_user_id: string; message_content: string; created_at: string; is_read: boolean | null }) => ({
       id: m.id,
       conversation_id: m.conversation_id,
       sender_user_id: m.sender_user_id,

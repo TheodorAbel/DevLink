@@ -8,10 +8,10 @@ export const dynamic = 'force-dynamic'
 // GET single job by ID
 export async function GET(
   req: NextRequest,
-  { params }: { params: { jobId: string } }
+  { params }: { params: Promise<{ jobId: string }> }
 ) {
   try {
-    const jobId = params.jobId
+    const { jobId } = await params
     console.log('[GET /api/jobs/[jobId]] JobId received:', jobId)
     
     if (!jobId) {
@@ -92,10 +92,10 @@ export async function GET(
 // PUT/PATCH to update job
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { jobId: string } }
+  { params }: { params: Promise<{ jobId: string }> }
 ) {
   try {
-    const jobId = params.jobId
+    const { jobId } = await params
     console.log('[PUT /api/jobs/[jobId]] ===== REQUEST START =====')
     console.log('[PUT /api/jobs/[jobId]] JobId received:', jobId)
     
@@ -173,7 +173,7 @@ export async function PUT(
     console.log('[PUT /api/jobs/[jobId]] Payload keys:', Object.keys(payload))
 
     // Build update object (only include provided fields)
-    const updateData: Record<string, any> = {}
+    const updateData: Record<string, string | number | boolean | string[] | null> = {}
     
     // Allow updating these fields
     const allowedFields = [

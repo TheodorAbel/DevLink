@@ -62,7 +62,26 @@ export async function GET(req: NextRequest) {
     if (jobsErr) return NextResponse.json({ error: jobsErr.message || 'Failed to load jobs' }, { status: 500 })
 
     const typeMap: Record<string, string> = { full_time: 'Full-time', part_time: 'Part-time', contract: 'Contract', internship: 'Internship' }
-    const items = (jobs || []).map((j: any) => {
+    
+    interface JobRow {
+      id: string;
+      title: string;
+      company_id: string;
+      location: string | null;
+      job_type: string | null;
+      salary_type: string | null;
+      salary_min: number | null;
+      salary_max: number | null;
+      salary_fixed: number | null;
+      salary_currency: string | null;
+      custom_salary_message: string | null;
+      description: string | null;
+      skills_required: string[] | null;
+      published_at: string | null;
+      companies: { company_name: string } | { company_name: string }[] | null;
+    }
+    
+    const items = (jobs || []).map((j: JobRow) => {
       let salary = 'Competitive'
       if (j.salary_type === 'range' && j.salary_min && j.salary_max) {
         salary = `${j.salary_currency || 'ETB'} ${j.salary_min} - ${j.salary_max}`
@@ -95,7 +114,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const authHeader = req.headers.get('authorization') || req.headers.get('Authorization')
-    let supabase = null as any
+    let supabase: ReturnType<typeof createSupabaseServerClient> | null = null
     let userId: string | null = null
     if (authHeader?.startsWith('Bearer ')) {
       const accessToken = authHeader.split(' ')[1] || ''
@@ -114,7 +133,7 @@ export async function POST(req: NextRequest) {
     const { error } = await supabase.from('saved_jobs').insert({ user_id: userId, job_id: body.jobId })
     if (error) {
       // Handle duplicate save gracefully
-      if ((error as any)?.code === '23505') {
+      if ((error as { code?: string })?.code === '23505') {
         return NextResponse.json({ ok: true }, { status: 200 })
       }
       return NextResponse.json({ error: error.message || 'Failed to save job' }, { status: 500 })
@@ -129,7 +148,7 @@ export async function POST(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   try {
     const authHeader = req.headers.get('authorization') || req.headers.get('Authorization')
-    let supabase = null as any
+    let supabase: ReturnType<typeof createSupabaseServerClient> | null = null
     let userId: string | null = null
     if (authHeader?.startsWith('Bearer ')) {
       const accessToken = authHeader.split(' ')[1] || ''

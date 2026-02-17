@@ -22,17 +22,6 @@ import { fetchPrimaryResume, uploadSeekerResume } from '@/lib/seekerProfile'
 import { useJobQuestions, type ScreeningQuestion } from '@/hooks/useJobQuestions'
 import { useApplyMutation } from '@/hooks/useApplications'
 
-// Question types mirror employer PostJobForm
-export type ScreeningType = 'yes-no' | 'multiple-choice' | 'checkbox' | 'short-answer'
-export type ScreeningOption = { id: string; label: string; value: string }
-export type ScreeningQuestion = {
-  id: string
-  text: string
-  type: ScreeningType
-  options?: ScreeningOption[]
-  required?: boolean
-}
-
 const schema = z.object({
   fullName: z.string().min(2, 'Your full name is required'),
   email: z.string().email('Enter a valid email'),

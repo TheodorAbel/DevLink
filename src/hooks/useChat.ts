@@ -87,7 +87,7 @@ export function useSendMessageMutation(conversationId: string | undefined) {
       if (!res.ok) throw new Error('Failed to send message');
       return res.json() as Promise<{ id: string; created_at: string }>
     },
-    onSuccess: async (_data, _vars) => {
+    onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ['messages', conversationId] });
       await qc.invalidateQueries({ queryKey: ['conversations'] });
     },

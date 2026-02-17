@@ -166,7 +166,6 @@ export function Messaging({ onBack, initialConversationId, initialParticipantId,
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [companyName, setCompanyName] = useState<string | null>(null);
-  const [companyLogo, setCompanyLogo] = useState<string | null>(null);
 
   useEffect(() => {
     const compute = () => {
@@ -195,9 +194,8 @@ export function Messaging({ onBack, initialConversationId, initialParticipantId,
           .maybeSingle();
         if (error || !data) return;
         if (!ignore) {
-          const comp = (data as any).companies as { company_name?: string | null; logo_url?: string | null } | null;
+          const comp = (data as { companies?: { company_name?: string | null; logo_url?: string | null } | null }).companies;
           setCompanyName(comp?.company_name ?? null);
-          setCompanyLogo(comp?.logo_url ?? null);
         }
       } catch {}
     };
@@ -391,6 +389,7 @@ export function Messaging({ onBack, initialConversationId, initialParticipantId,
       </CardContent>
     </Card>
   ));
+  ConversationsList.displayName = 'ConversationsList';
 
   const ChatArea = memo(() => {
     if (!currentConversation) {
@@ -582,6 +581,7 @@ export function Messaging({ onBack, initialConversationId, initialParticipantId,
       </Card>
     );
   });
+  ChatArea.displayName = 'ChatArea';
 
   return (
     <div className="min-h-screen relative">

@@ -1,9 +1,21 @@
 "use client";
 
+import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { Briefcase, Search, Link2, Sparkles } from "lucide-react";
 
 export function SaaSBackground() {
+  const particles = useMemo(
+    () =>
+      [...Array(20)].map(() => ({
+        top: `${Math.random() * 100}%`,
+        left: `${Math.random() * 100}%`,
+        duration: 3 + Math.random() * 2,
+        delay: Math.random() * 2,
+      })),
+    []
+  );
+
   return (
     <div className="fixed inset-0 -z-10 overflow-hidden bg-slate-950">
       {/* Animated dark gradient background */}
@@ -101,22 +113,22 @@ export function SaaSBackground() {
       />
 
       {/* Starfield particles */}
-      {[...Array(20)].map((_, i) => (
+      {particles.map((p, i) => (
         <motion.div
           key={i}
           className="absolute w-1 h-1 bg-cyan-400/30 rounded-full"
           style={{
-            top: `${Math.random() * 100}%`,
-            left: `${Math.random() * 100}%`,
+            top: p.top,
+            left: p.left,
           }}
           animate={{
             opacity: [0.2, 0.8, 0.2],
             scale: [1, 1.5, 1],
           }}
           transition={{
-            duration: 3 + Math.random() * 2,
+            duration: p.duration,
             repeat: Infinity,
-            delay: Math.random() * 2,
+            delay: p.delay,
           }}
         />
       ))}

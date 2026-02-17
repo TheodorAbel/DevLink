@@ -2,20 +2,19 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import dynamic from "next/dynamic";
 import Link from "next/link";
-import { Mail, Lock, ArrowRight, Sparkles, ShieldCheck } from "lucide-react";
+import { Mail, Lock, ArrowRight, Sparkles, ShieldCheck, Copy, Wand2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { supabase } from "@/lib/supabaseClient";
 import { ROLES } from "@/lib/roles";
 import { signIn } from "@/lib/auth";
 import { SaaSInput } from "@/components/auth/SaaSInput";
 
-const SaaSBackground = dynamic(
-  () => import("@/components/auth/SaaSBackground").then((m) => m.SaaSBackground),
-  { ssr: false }
-);
+const SEEKER_DEMO_EMAIL = process.env.NEXT_PUBLIC_DEMO_SEEKER_EMAIL ?? "seeker.demo@devlink.app";
+const SEEKER_DEMO_PASSWORD = process.env.NEXT_PUBLIC_DEMO_SEEKER_PASSWORD ?? "SeekerDemo123!";
+
+const EMPLOYER_DEMO_EMAIL = process.env.NEXT_PUBLIC_DEMO_EMPLOYER_EMAIL ?? "employer.demo@devlink.app";
+const EMPLOYER_DEMO_PASSWORD = process.env.NEXT_PUBLIC_DEMO_EMPLOYER_PASSWORD ?? "EmployerDemo123!";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -23,14 +22,38 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
+  const copyToClipboard = async (value: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      toast.success(`${label} copied`);
+    } catch {
+      toast.error("Copy failed. Please copy manually.");
+    }
+  };
+
+  const fillTestCredentials = (demoEmail: string, demoPassword: string) => {
+    setEmail(demoEmail);
+    setPassword(demoPassword);
+    toast.success("Test credentials filled");
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    const { user, session } = await signIn(email, password);
+    const result = await signIn(email, password);
+
+    if (result?.error) {
+      const message = result.error.message || "Login failed. Please try again.";
+      toast.error(message);
+      setLoading(false);
+      return;
+    }
+
+    const { user, session } = result;
 
     if (!user || !session) {
-      toast.error("Invalid credentials. Please try again.");
+      toast.error("Login failed. Please try again.");
       setLoading(false);
       return;
     }
@@ -65,7 +88,10 @@ export default function LoginPage() {
 
   return (
     <>
-      <SaaSBackground />
+      <div className="fixed inset-0 -z-10 overflow-hidden bg-slate-950">
+        <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-slate-800 to-indigo-900" />
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/50 via-transparent to-slate-900/30" />
+      </div>
 
       <div className="min-h-screen flex flex-col">
         {/* Header */}
@@ -82,12 +108,7 @@ export default function LoginPage() {
 
         {/* Main Content */}
         <main className="flex-1 flex items-center justify-center px-6 py-12">
-          <motion.div
-            className="w-full max-w-md"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
+          <div className="w-full max-w-md">
             {/* Dark Glassmorphism Card */}
             <div className="relative backdrop-blur-xl bg-slate-900/60 rounded-2xl shadow-2xl border border-indigo-500/30 p-8">
               {/* Glow effect */}
@@ -96,22 +117,81 @@ export default function LoginPage() {
               <div className="relative space-y-8">
                 {/* Heading */}
                 <div className="text-center space-y-2">
-                  <motion.h1
-                    className="text-3xl font-bold tracking-tight bg-gradient-to-r from-indigo-400 to-cyan-300 bg-clip-text text-transparent"
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 }}
-                  >
+                  <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-indigo-400 to-cyan-300 bg-clip-text text-transparent">
                     Welcome back
-                  </motion.h1>
-                  <motion.p
-                    className="text-slate-400"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.2 }}
-                  >
+                  </h1>
+                  <p className="text-slate-400">
                     Log in to your DevLink account
-                  </motion.p>
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-indigo-500/20 bg-slate-950/30 px-4 py-3">
+                  <div className="space-y-1">
+                    <div className="text-sm font-semibold text-slate-200">Test accounts</div>
+                    <div className="text-xs text-slate-400">Use these accounts to explore DevLink.</div>
+                  </div>
+
+                  <div className="mt-3 grid gap-3">
+                    <div className="rounded-lg border border-indigo-500/15 bg-slate-900/30 p-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="space-y-0.5">
+                          <div className="text-xs font-semibold text-slate-300">Seeker</div>
+                          <div className="text-[11px] text-slate-500">Email</div>
+                          <div className="text-sm font-medium text-slate-200 break-all">{SEEKER_DEMO_EMAIL}</div>
+                          <div className="mt-2 text-[11px] text-slate-500">Password</div>
+                          <div className="text-sm font-medium text-slate-200 break-all">{SEEKER_DEMO_PASSWORD}</div>
+                        </div>
+                        <div className="flex flex-col gap-2">
+                          <button
+                            type="button"
+                            onClick={() => fillTestCredentials(SEEKER_DEMO_EMAIL, SEEKER_DEMO_PASSWORD)}
+                            className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-500/15 px-3 py-2 text-xs font-semibold text-indigo-200 hover:bg-indigo-500/25 transition-colors"
+                          >
+                            <Wand2 className="h-4 w-4" />
+                            Use
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => copyToClipboard(`${SEEKER_DEMO_EMAIL}\n${SEEKER_DEMO_PASSWORD}`, "Seeker credentials")}
+                            className="inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-xs text-slate-300 hover:text-white hover:bg-slate-800/60 transition-colors"
+                          >
+                            <Copy className="h-4 w-4" />
+                            Copy
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="rounded-lg border border-indigo-500/15 bg-slate-900/30 p-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="space-y-0.5">
+                          <div className="text-xs font-semibold text-slate-300">Employer</div>
+                          <div className="text-[11px] text-slate-500">Email</div>
+                          <div className="text-sm font-medium text-slate-200 break-all">{EMPLOYER_DEMO_EMAIL}</div>
+                          <div className="mt-2 text-[11px] text-slate-500">Password</div>
+                          <div className="text-sm font-medium text-slate-200 break-all">{EMPLOYER_DEMO_PASSWORD}</div>
+                        </div>
+                        <div className="flex flex-col gap-2">
+                          <button
+                            type="button"
+                            onClick={() => fillTestCredentials(EMPLOYER_DEMO_EMAIL, EMPLOYER_DEMO_PASSWORD)}
+                            className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-500/15 px-3 py-2 text-xs font-semibold text-indigo-200 hover:bg-indigo-500/25 transition-colors"
+                          >
+                            <Wand2 className="h-4 w-4" />
+                            Use
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => copyToClipboard(`${EMPLOYER_DEMO_EMAIL}\n${EMPLOYER_DEMO_PASSWORD}`, "Employer credentials")}
+                            className="inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-xs text-slate-300 hover:text-white hover:bg-slate-800/60 transition-colors"
+                          >
+                            <Copy className="h-4 w-4" />
+                            Copy
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Form */}
@@ -149,15 +229,10 @@ export default function LoginPage() {
                   </div>
 
                   {/* Submit Button */}
-                  <motion.button
+                  <button
                     type="submit"
                     disabled={loading}
                     className="w-full py-4 px-6 rounded-xl bg-gradient-to-r from-indigo-500 via-blue-600 to-cyan-500 text-white font-semibold shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 group transition-all duration-200"
-                    whileHover={{ scale: loading ? 1 : 1.02 }}
-                    whileTap={{ scale: loading ? 1 : 0.98 }}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.4, type: "spring", stiffness: 300 }}
                   >
                     {loading ? (
                       <>
@@ -170,16 +245,11 @@ export default function LoginPage() {
                         <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                       </>
                     )}
-                  </motion.button>
+                  </button>
                 </form>
 
                 {/* Footer Links */}
-                <motion.div
-                  className="text-center space-y-3"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.5 }}
-                >
+                <div className="text-center space-y-3">
                   <div className="flex items-center justify-center gap-2 text-sm text-slate-400">
                     <ShieldCheck className="w-4 h-4 text-cyan-400" />
                     <span>Your data is safe with DevLink</span>
@@ -193,20 +263,15 @@ export default function LoginPage() {
                       Create one
                     </Link>
                   </p>
-                </motion.div>
+                </div>
               </div>
             </div>
 
             {/* Trust Signal */}
-            <motion.p
-              className="text-center text-sm text-slate-500 mt-6"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.6 }}
-            >
+            <p className="text-center text-sm text-slate-500 mt-6">
               Trusted by 10,000+ job seekers and companies
-            </motion.p>
-          </motion.div>
+            </p>
+          </div>
         </main>
 
         {/* Footer */}

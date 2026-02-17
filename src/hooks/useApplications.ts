@@ -27,7 +27,8 @@ export function useApplications() {
       const res = await fetch('/api/applications?limit=12', { headers: { Authorization: `Bearer ${token}` } });
       if (!res.ok) return [];
       const j = await res.json();
-      const list: any[] = Array.isArray(j.applications) ? j.applications : [];
+      interface RawApp { id: string; job_id: string; status: string; created_at: string; jobs?: unknown }
+      const list: RawApp[] = Array.isArray(j.applications) ? j.applications : [];
       if (!list.length) return [];
       const now = new Date();
       // If API provided joined jobs, map directly for speed

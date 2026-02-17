@@ -34,7 +34,6 @@ import {
   ChevronLeft,
   ChevronRight,
   LogOut,
-  User,
 } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import { useExpensiveToast } from "@/hooks/useExpensiveToast";
@@ -93,46 +92,6 @@ const mockStats = [
     value: "89%",
     change: -2.1,
     trend: "down" as const,
-  },
-];
-
-const mockJobs: Job[] = [
-  {
-    id: "1",
-    title: "Senior Frontend Developer",
-    company: "TechCorp",
-    location: "San Francisco, CA",
-    jobType: "Full Time",
-    salary: "$120k - $160k",
-    applicants: 45,
-    views: 342,
-    status: "active" as const,
-    isBoosted: true,
-    postedAt: "2 days ago",
-  },
-  {
-    id: "2",
-    title: "Product Manager",
-    company: "TechCorp",
-    location: "Remote",
-    jobType: "Full Time",
-    salary: "$140k - $180k",
-    applicants: 78,
-    views: 523,
-    status: "active" as const,
-    postedAt: "1 week ago",
-  },
-  {
-    id: "3",
-    title: "UX Designer",
-    company: "TechCorp",
-    location: "New York, NY",
-    jobType: "Contract",
-    salary: "$85k - $110k",
-    applicants: 23,
-    views: 156,
-    status: "draft" as const,
-    postedAt: "3 days ago",
   },
 ];
 
@@ -259,7 +218,7 @@ export default function EmployerDashboardApp() {
         : j.salary_currency || "Competitive",
       applicants: j.applications_count ?? 0,
       views: j.views_count ?? 0,
-      status: ((j.status as any) ?? "draft") as JobStatus,
+      status: ((j.status as string) ?? "draft") as JobStatus,
       isBoosted: false,
       postedAt: formatTimeAgo(j.published_at || j.created_at),
       updatedAt: j.updated_at ? formatTimeAgo(j.updated_at) : undefined,
@@ -670,7 +629,7 @@ export default function EmployerDashboardApp() {
           
           <div className="py-4 border-t">
             <p className="text-sm text-muted-foreground">
-              You'll need to sign in again to access your employer dashboard and manage your job postings.
+              You&apos;ll need to sign in again to access your employer dashboard and manage your job postings.
             </p>
           </div>
 

@@ -68,7 +68,6 @@ export function PostJobForm({
   onChange
 }: PostJobFormProps) {
   const xToast = useExpensiveToast();
-  const [isLoadingJob, setIsLoadingJob] = useState(false);
   const [formData, setFormData] = useState<JobFormData>({
     title: '',
     location: '',
@@ -114,7 +113,7 @@ export function PostJobForm({
       const normalizeDeadline = (val: unknown): Date | null => {
         if (!val) return null;
         if (val instanceof Date) return val;
-        const d = new Date(val as any);
+        const d = new Date(val as string | number);
         return isNaN(d.getTime()) ? null : d;
       };
       
@@ -129,7 +128,7 @@ export function PostJobForm({
       const normalized = {
         ...initialData,
         jobType: initialData.jobType ? (jobTypeMap[initialData.jobType] || initialData.jobType) : '',
-        deadline: normalizeDeadline((initialData as any).deadline ?? null),
+        deadline: normalizeDeadline((initialData as { deadline?: unknown }).deadline ?? null),
       };
       setFormData(prev => ({ ...prev, ...normalized }));
       // Store initial data for change tracking
@@ -195,7 +194,7 @@ export function PostJobForm({
       changesList.push(`Screening questions ${count > 0 ? `(${count})` : 'removed'}`);
     }
     
-    const time1 = initialFormData.deadline ? (initialFormData.deadline instanceof Date ? initialFormData.deadline.getTime() : new Date(initialFormData.deadline as any).getTime()) : null;
+    const time1 = initialFormData.deadline ? (initialFormData.deadline instanceof Date ? initialFormData.deadline.getTime() : new Date(initialFormData.deadline as string | number).getTime()) : null;
     const time2 = formData.deadline ? (formData.deadline instanceof Date ? formData.deadline.getTime() : new Date(formData.deadline).getTime()) : null;
     if (time1 !== time2) {
       changesList.push('Application deadline changed');
@@ -577,7 +576,7 @@ export function PostJobForm({
         const v = formData.deadline as unknown;
         if (!v) return null;
         if (v instanceof Date) return isNaN(v.getTime()) ? null : v.toISOString();
-        const d = new Date(v as any);
+        const d = new Date(v as string | number);
         return isNaN(d.getTime()) ? null : d.toISOString();
       })();
 
@@ -626,7 +625,7 @@ export function PostJobForm({
 
       if (!res.ok) {
         console.error('[PostJobForm] ===== REQUEST FAILED =====');
-        let errBody: any = null;
+        let errBody: { error?: string; details?: string } | null = null;
         const ct = res.headers.get('content-type') || '';
         try {
           if (ct.includes('application/json')) {

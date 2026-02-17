@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "./ui/sheet";
 import { PostJobForm, JobFormData } from "./PostJobForm";
 import { useJobById } from "@/hooks/employer/useJobById";
@@ -260,7 +260,7 @@ export function EditJobModal({ jobId, isOpen, onClose }: EditJobModalProps) {
         const v = draftData.deadline as unknown;
         if (!v) return null;
         if (v instanceof Date) return isNaN(v.getTime()) ? null : v.toISOString();
-        const d = new Date(v as any);
+        const d = new Date(v as string | number);
         return isNaN(d.getTime()) ? null : d.toISOString();
       })();
 
@@ -359,7 +359,7 @@ export function EditJobModal({ jobId, isOpen, onClose }: EditJobModalProps) {
     }
   };
   
-  const handleSuccess = () => {
+  const handleSuccess = useCallback(() => {
     // Invalidate and refetch employer jobs list to show updated data
     queryClient.invalidateQueries({ queryKey: ['employer-jobs'] });
     queryClient.invalidateQueries({ queryKey: ['job', jobId] });
@@ -370,7 +370,7 @@ export function EditJobModal({ jobId, isOpen, onClose }: EditJobModalProps) {
     
     // Close modal
     onClose();
-  };
+  }, [queryClient, jobId, clearDraft, onClose]);
   
   const handleClose = () => {
     if (hasUnsavedChanges) {
@@ -412,7 +412,7 @@ export function EditJobModal({ jobId, isOpen, onClose }: EditJobModalProps) {
       window.addEventListener('keydown', handleKeyDown);
       return () => window.removeEventListener('keydown', handleKeyDown);
     }
-  }, [isOpen, draftData, isLoading]);
+  }, [isOpen, draftData, isLoading, handleSuccess]);
 
   return (
     <>
@@ -447,7 +447,7 @@ export function EditJobModal({ jobId, isOpen, onClose }: EditJobModalProps) {
               <Button 
                 variant="outline" 
                 size="sm"
-                onClick={() => draftData && handlePreview(draftData)}
+                onClick={() => draftData && handlePreview(draftData as JobFormData)}
                 disabled={!draftData}
               >
                 <Eye className="h-4 w-4 mr-2" />

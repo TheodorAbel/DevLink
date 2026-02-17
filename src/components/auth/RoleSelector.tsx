@@ -1,6 +1,5 @@
 "use client";
 
-import { motion } from "framer-motion";
 import { Role } from "@/lib/roles";
 import { Briefcase, Users } from "lucide-react";
 
@@ -20,7 +19,7 @@ export function RoleSelector({ value, onChange, roles }: RoleSelectorProps) {
         {roles.map((role) => {
           const isSelected = value === role.value;
           return (
-            <motion.button
+            <button
               key={role.value}
               type="button"
               onClick={() => onChange(role.value)}
@@ -29,8 +28,6 @@ export function RoleSelector({ value, onChange, roles }: RoleSelectorProps) {
                   ? "border-indigo-500/50 bg-gradient-to-br from-indigo-500 via-blue-600 to-cyan-500 text-white shadow-lg shadow-indigo-500/30"
                   : "border-slate-700 bg-slate-800/60 hover:border-indigo-500/30 hover:bg-slate-800/80"
               }`}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
             >
               <div className="flex flex-col items-center gap-2">
                 <div className={`${isSelected ? "text-white" : "text-indigo-400"}`}>
@@ -43,17 +40,14 @@ export function RoleSelector({ value, onChange, roles }: RoleSelectorProps) {
                   {role.description}
                 </span>
               </div>
-              
+
               {isSelected && (
-                <motion.div
+                <div
                   className="absolute inset-0 rounded-xl bg-gradient-to-br from-indigo-500 via-blue-600 to-cyan-500"
-                  layoutId="selectedRole"
-                  initial={false}
-                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
                   style={{ zIndex: -1 }}
                 />
               )}
-            </motion.button>
+            </button>
           );
         })}
       </div>

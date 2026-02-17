@@ -22,7 +22,7 @@ export function useCompanyCompletion() {
 
     const missing: string[] = []
     let score = 0
-    let total = 100
+    const total = 100
 
     // Weights
     const W_VISUALS = 10

@@ -1,19 +1,13 @@
-'use client'
-
-import dynamic from 'next/dynamic'
 import Link from 'next/link'
-import { motion } from 'framer-motion'
 import { Sparkles, Rocket, Users, ShieldCheck, Briefcase, Zap } from 'lucide-react'
-
-const SaaSBackground = dynamic(
-  () => import('@/components/auth/SaaSBackground').then(m => m.SaaSBackground),
-  { ssr: false }
-)
 
 export default function LandingPage() {
   return (
     <>
-      <SaaSBackground />
+      <div className="fixed inset-0 -z-10 overflow-hidden bg-slate-950">
+        <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-slate-800 to-indigo-900" />
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/50 via-transparent to-slate-900/30" />
+      </div>
 
       <div className="min-h-screen flex flex-col">
         {/* Header */}
@@ -31,12 +25,7 @@ export default function LandingPage() {
         {/* Hero */}
         <main className="flex-1 flex items-center justify-center px-6 py-16">
           <div className="w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              className="space-y-6"
-            >
+            <div className="space-y-6">
               <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-indigo-300 via-cyan-200 to-white bg-clip-text text-transparent">
                 Connect developers and companies in one powerful platform
               </h1>
@@ -66,14 +55,10 @@ export default function LandingPage() {
                 <span className="opacity-50">•</span>
                 <span>Cancel anytime</span>
               </div>
-            </motion.div>
+            </div>
 
             {/* Right visual card */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.1 }}
-            >
+            <div>
               <div className="relative backdrop-blur-xl bg-slate-900/60 rounded-2xl shadow-2xl border border-indigo-500/30 p-6 lg:p-8">
                 <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-cyan-500/20 blur-xl" />
                 <div className="relative grid grid-cols-2 gap-4">
@@ -82,35 +67,27 @@ export default function LandingPage() {
                     { icon: Users, title: 'Smart matching', desc: 'Connect seekers to roles with precision.' },
                     { icon: Zap, title: 'Fast workflow', desc: 'Save, share, and apply in seconds.' },
                     { icon: ShieldCheck, title: 'Secure by design', desc: 'Privacy-first authentication & data.' },
-                  ].map((f, i) => (
-                    <motion.div
+                  ].map((f) => (
+                    <div
                       key={f.title}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.15 + i * 0.05 }}
                       className="rounded-xl border border-indigo-500/20 bg-slate-900/40 p-4"
                     >
                       <f.icon className="w-6 h-6 text-cyan-300 mb-2" />
                       <div className="text-slate-200 font-semibold">{f.title}</div>
                       <div className="text-slate-400 text-sm">{f.desc}</div>
-                    </motion.div>
+                    </div>
                   ))}
                 </div>
               </div>
-            </motion.div>
+            </div>
           </div>
         </main>
 
         {/* Social proof */}
         <section className="px-6 pb-12">
-          <motion.p
-            className="text-center text-sm text-slate-500"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
-          >
+          <p className="text-center text-sm text-slate-500">
             Trusted by 10,000+ job seekers and companies
-          </motion.p>
+          </p>
         </section>
 
         {/* Footer */}

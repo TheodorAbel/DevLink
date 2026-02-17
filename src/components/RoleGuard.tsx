@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { Role } from "@/lib/roles";
-import { useUserBootstrap } from "@/hooks/useUserProfile";
 
 type RoleGuardProps = {
   allowedRole: Role;

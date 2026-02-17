@@ -29,7 +29,6 @@ import {
   Trash2
 } from "lucide-react";
 import { Switch } from "./ui/switch";
-import { toast } from "sonner";
 import { useExpensiveToast } from "@/hooks/useExpensiveToast";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -350,7 +349,7 @@ export function CompanyProfile() {
       const filePath = `company-logos/${fileName}`;
       
       // Upload to Supabase Storage
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('company-assets')
         .upload(filePath, file, {
           cacheControl: '3600',

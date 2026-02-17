@@ -37,8 +37,6 @@ import {
 import { Slider } from './ui/slider';
 import { toast } from 'sonner';
 import { ApplicantCompanyProfileDrawer } from './ApplicantCompanyProfileDrawer';
-import { supabase } from '@/lib/supabaseClient';
-import { formatDistanceToNow } from 'date-fns';
 import { useJobs } from '@/hooks/useJobs';
 import { useSavedJobsList, useSaveJobMutation, getMockSaved, toggleMockSaved } from '@/hooks/useSavedJobs';
 import { useQueryClient } from '@tanstack/react-query';
@@ -213,7 +211,7 @@ export function JobList({ onJobSelect: _onJobSelect }: JobListProps) {
 
   // Jobs via TanStack Query
   const { data: jobsData, isLoading: loadingDb, error: jobsError } = useJobs();
-  const dbJobs: Job[] = jobsData ?? [];
+  const dbJobs: Job[] = useMemo(() => jobsData ?? [], [jobsData]);
   // Saved jobs (DB) via query
   const { data: savedList = [] } = useSavedJobsList();
   const saveMutation = useSaveJobMutation();
@@ -292,8 +290,6 @@ export function JobList({ onJobSelect: _onJobSelect }: JobListProps) {
     // initialize mock saved ids from localStorage once
     const arr = getMockSaved();
     setSavedMockIds(new Set(arr.map(a => a.id)));
-    // we intentionally do not add savedMockIds to deps to avoid loops
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [savedList]);
 
   const isDbJob = (jobId: string) => dbJobs.some(j => j.id === jobId);

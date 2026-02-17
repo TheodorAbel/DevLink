@@ -36,7 +36,7 @@ export function Header() {
   useEffect(() => {
     let isMounted = true;
 
-    const applyFromAuth = (u: any | null) => {
+    const applyFromAuth = (u: { email?: string; user_metadata?: { name?: string } } | null) => {
       if (!isMounted) return;
       const email = u?.email ?? null;
       const metaName = u?.user_metadata?.name as string | undefined;
@@ -79,7 +79,7 @@ export function Header() {
       isMounted = false;
       // Ensure subscription cleanup
       cleanupPromise.then((cleanup) => {
-        try { (cleanup as any)?.(); } catch {}
+        try { cleanup?.(); } catch {}
       });
     };
   }, []);

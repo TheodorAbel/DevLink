@@ -165,6 +165,10 @@ export function ProfileEdit({ onBack: _onBack, initialTab = 'personal' }: Profil
         setLoading(profileQuery.isLoading || primaryResumeQuery.isLoading || completionQuery.isLoading);
         const { data: authData } = await supabase.auth.getUser();
         const authEmail = authData?.user?.email ?? '';
+        const asRecord = (value: unknown): Record<string, unknown> =>
+          value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+        const asString = (value: unknown): string =>
+          typeof value === 'string' ? value : value == null ? '' : String(value);
         if (profileQuery.data && mounted) {
           const data = profileQuery.data;
           setProfile(prev => ({
@@ -180,8 +184,32 @@ export function ProfileEdit({ onBack: _onBack, initialTab = 'personal' }: Profil
               linkedin: data.personalInfo.linkedin,
             },
             skills: data.skills,
-            experience: data.experience as any,
-            education: data.education as any,
+            experience: (Array.isArray(data.experience) ? data.experience : []).map((e, idx: number) => {
+              const ex = asRecord(e);
+              return {
+                id: asString(ex.id ?? `${Date.now()}-${idx}`),
+                title: asString(ex.title),
+                company: asString(ex.company),
+                startDate: asString(ex.startDate),
+                endDate: asString(ex.endDate),
+                location: asString(ex.location),
+                description: asString(ex.description),
+              };
+            }),
+            education: (Array.isArray(data.education) ? data.education : []).map((ed, idx: number) => {
+              const edu = asRecord(ed);
+              const school = asString(edu.school || edu.institution);
+              const gpaRaw = edu.gpa;
+              return {
+                id: asString(edu.id ?? `${Date.now()}-edu-${idx}`),
+                degree: asString(edu.degree),
+                school,
+                startDate: asString(edu.startDate),
+                endDate: asString(edu.endDate),
+                location: asString(edu.location),
+                gpa: gpaRaw == null || gpaRaw === '' ? undefined : asString(gpaRaw),
+              };
+            }),
           }));
         }
         if (primaryResumeQuery.data && mounted) {

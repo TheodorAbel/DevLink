@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
-type Theme = 'light' | 'dark' | 'system';
+type Theme = 'light';
 
 interface ThemeContextType {
   theme: Theme;
@@ -13,15 +13,11 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>(() => {
-    // Get theme from localStorage or default to system
-    if (typeof window !== 'undefined') {
-      return (localStorage.getItem('theme') as Theme) || 'system';
-    }
-    return 'system';
-  });
-
+  const [theme] = useState<Theme>('light');
   const [actualTheme, setActualTheme] = useState<'light' | 'dark'>('light');
+  const setTheme = () => {
+    return;
+  };
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -29,17 +25,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     // Remove previous theme classes
     root.classList.remove('light', 'dark');
 
-    // System mode now behaves as light mode
-    if (theme === 'system' || theme === 'light') {
-      root.classList.add('light');
-      setActualTheme('light');
-    } else {
-      root.classList.add('dark');
-      setActualTheme('dark');
-    }
-
-    // Save to localStorage
-    localStorage.setItem('theme', theme);
+    root.classList.add('light');
+    setActualTheme('light');
   }, [theme]);
 
   return (
