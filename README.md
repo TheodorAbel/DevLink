@@ -89,8 +89,8 @@ NEXT_PUBLIC_DEMO_SEEKER_EMAIL=lenehod633@alibto.com
 NEXT_PUBLIC_DEMO_SEEKER_PASSWORD=090909
 
 # Optional employer demo (only if you have a real Supabase Auth user for it)
-NEXT_PUBLIC_DEMO_EMPLOYER_EMAIL=employer.demo@devlink.app
-NEXT_PUBLIC_DEMO_EMPLOYER_PASSWORD=EmployerDemo123!
+NEXT_PUBLIC_DEMO_EMPLOYER_EMAIL=hotaviv151@alibto.com
+NEXT_PUBLIC_DEMO_EMPLOYER_PASSWORD=090909
 ```
 
 Important:

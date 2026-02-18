@@ -240,6 +240,15 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Ensure role is employer server-side (service role), so client doesn't need to update users.role (often blocked by RLS)
+    const { error: roleErr } = await supabaseAdmin
+      .from('users')
+      .update({ role: 'employer' })
+      .eq('id', userId)
+    if (roleErr) {
+      console.error('[API] set employer role error:', roleErr)
+    }
+
     // Replace-all helpers for child tables
     type ReplaceAllResult = { ok?: true; error?: { message: string } };
     async function replaceAll<TIn extends Record<string, unknown>, TOut extends Record<string, unknown>>(

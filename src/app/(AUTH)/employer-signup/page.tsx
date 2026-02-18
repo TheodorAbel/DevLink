@@ -74,6 +74,60 @@ export default function EmployerSignupPage() {
 
   const totalSteps = 3;
 
+  const fillTestStepData = () => {
+    if (currentStep === 1) {
+      const dummyLogo = new File([new Uint8Array([137, 80, 78, 71])], 'company-logo.png', {
+        type: 'image/png',
+      });
+
+      setStep1Data({
+        companyName: 'DevLink Labs',
+        logo: dummyLogo,
+        website: 'https://devlinklabs.com',
+        industry: 'technology',
+        companySize: '11-50',
+      });
+
+      toast.success('Step 1 test data filled');
+      return;
+    }
+
+    if (currentStep === 2) {
+      const dummyLicense = new File([
+        'DevLink Labs Business License (Demo)\nThis is a placeholder file used for testing uploads.',
+      ], 'business-license-demo.pdf', { type: 'application/pdf' });
+
+      setStep2Data({
+        tinNumber: '1234567890',
+        licenseNumber: 'LIC-2026-001',
+        businessLicense: dummyLicense,
+        region: 'addis-ababa',
+        cityAddress: 'Bole Sub-city, Woreda 03',
+        specificAddress: 'Bole Road, near Edna Mall, 3rd floor, Office 12',
+        phoneNumber: '+251912345678',
+      });
+
+      toast.success('Step 2 test data filled');
+      return;
+    }
+
+    const description =
+      'DevLink Labs is a product-driven team building a fast, modern hiring platform for engineers and high-growth companies. '
+      + 'We focus on clarity, trust, and speed across the recruiting process—from job discovery to application and communication. '
+      + 'Our culture values ownership, simplicity, and measurable outcomes. We invest in strong engineering practices, clean design systems, '
+      + 'and security-first development. If you love building delightful experiences and shipping quality quickly, you will feel at home here.';
+
+    setStep3Data({
+      description,
+      yearFounded: '2022',
+      linkedinUrl: 'https://linkedin.com/company/devlink-labs',
+      facebookUrl: 'https://facebook.com/devlinklabs',
+      departments: ['tech', 'design'],
+    });
+
+    toast.success('Step 3 test data filled');
+  };
+
   const validateStep1 = () => {
     if (!step1Data.companyName.trim()) {
       toast.error('Company name is required');
@@ -249,22 +303,6 @@ export default function EmployerSignupPage() {
         }
       }
 
-      // Ensure the user role is employer in DB before redirecting
-      try {
-        const userId = session?.user?.id;
-        if (userId) {
-          const { error: roleErr } = await supabase
-            .from('users')
-            .update({ role: 'employer' })
-            .eq('id', userId);
-          if (roleErr) {
-            console.error('Failed to set employer role:', roleErr);
-          }
-        }
-      } catch (e) {
-        console.error('Unexpected error setting employer role:', e);
-      }
-
       toast.success('Company profile saved. Redirecting to dashboard...');
       router.push('/employer/dashboard');
     } catch (e: unknown) {
@@ -288,17 +326,26 @@ export default function EmployerSignupPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 py-8 px-4">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <button
-            onClick={handleBack}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            Back
-          </button>
-          
+      <div className="relative z-10">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-8">
+            <button
+              onClick={handleBack}
+              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              Back
+            </button>
+
+            <button
+              type="button"
+              onClick={fillTestStepData}
+              className="rounded-xl border border-gray-200 bg-white/70 px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-white transition-colors"
+            >
+              Fill test data (Step {currentStep})
+            </button>
+          </div>
           <ProgressBar currentStep={currentStep} totalSteps={totalSteps} />
         </div>
 

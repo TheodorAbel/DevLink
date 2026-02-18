@@ -3,7 +3,7 @@ import RoleGuard from "@/components/RoleGuard";
 
 export default function EmployerDashboard() {
   return (
-    <RoleGuard allowedRole="employer">
+    <RoleGuard allowedRole="employer" requireCompanyProfile>
       <EmployerDashboardApp />
     </RoleGuard>
   );

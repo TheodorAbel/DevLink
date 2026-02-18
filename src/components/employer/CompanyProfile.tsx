@@ -90,6 +90,8 @@ export function CompanyProfile() {
 
   const [mediaError, setMediaError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const lastSaveErrorToastAtRef = useRef<number>(0);
 
   const [profileData, setProfileData] = useState<CompanyProfileData>({
     logo: 'https://images.unsplash.com/photo-1600880292203-757bb62b4baf?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=100&q=80',
@@ -186,6 +188,16 @@ export function CompanyProfile() {
   // Removed unused logoFile state
 
   const handleSave = async () => {
+    if (isSaving) return;
+
+    const toastErrorOnce = (title: string, description?: string) => {
+      // Prevent toast spam if user double-clicks or if the save path throws rapidly.
+      if (Date.now() - lastSaveErrorToastAtRef.current < 3000) return;
+      lastSaveErrorToastAtRef.current = Date.now();
+      xToast.error({ title, description });
+    };
+
+    setIsSaving(true);
     // Validate media before saving
     const media = profileData.media ?? [];
     const imageCount = media.filter(m => m.type === 'image').length;
@@ -193,17 +205,20 @@ export function CompanyProfile() {
     
     if (imageCount > MEDIA_LIMITS.MAX_IMAGES) {
       xToast.warning({ title: `Maximum ${MEDIA_LIMITS.MAX_IMAGES} images allowed` });
+      setIsSaving(false);
       return;
     }
     
     if (videoCount > MEDIA_LIMITS.MAX_VIDEOS) {
       xToast.warning({ title: `Maximum ${MEDIA_LIMITS.MAX_VIDEOS} videos allowed` });
+      setIsSaving(false);
       return;
     }
     
     const longVideo = media.find(m => m.type === 'video' && (m.duration ?? 0) > MEDIA_LIMITS.MAX_VIDEO_DURATION);
     if (longVideo) {
       xToast.warning({ title: `Videos must be under ${Math.floor(MEDIA_LIMITS.MAX_VIDEO_DURATION / 60)} minutes` });
+      setIsSaving(false);
       return;
     }
     // Build payload mapping UI -> schema
@@ -222,6 +237,7 @@ export function CompanyProfile() {
     // required fields sanity (schema requires: company_name, industry, company_size, country, city, description)
     if (!profileData.companyName || !profileData.industry || !profileData.companySize || !city || !profileData.description || !country) {
       xToast.warning({ title: 'Missing required fields', description: 'Fill Company Name, Industry, Company Size, Location as "City, Country" and Description.' });
+      setIsSaving(false);
       return;
     }
 
@@ -287,7 +303,7 @@ export function CompanyProfile() {
     try {
       const { data: { session }, error: sessErr } = await supabase.auth.getSession();
       if (sessErr || !session?.access_token) {
-        xToast.error({ title: 'Not authenticated', description: 'Please log in again to save your company profile.' });
+        toastErrorOnce('Not authenticated', 'Please log in again to save your company profile.');
         return;
       }
 
@@ -305,7 +321,7 @@ export function CompanyProfile() {
       console.log('Save company response:', res.status, out);
       if (!res.ok) {
         console.error('Save company failed:', out);
-        xToast.error({ title: 'Failed to save company profile', description: String(out?.details || out?.error || 'Unexpected error') });
+        toastErrorOnce('Failed to save company profile', String(out?.details || out?.error || 'Unexpected error'));
         return;
       }
 
@@ -313,7 +329,9 @@ export function CompanyProfile() {
     } catch (e: unknown) {
       console.error('Save company exception:', e);
       const message = e instanceof Error ? e.message : 'Error saving company profile';
-      xToast.error({ title: 'Save failed', description: message });
+      toastErrorOnce('Save failed', message);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -839,7 +857,7 @@ export function CompanyProfile() {
               </>
             )}
           </Button>
-          <Button onClick={handleSave} className="gap-2">
+          <Button onClick={handleSave} className="gap-2" disabled={isSaving}>
             <Save className="h-4 w-4" />
             Save Changes
           </Button>
@@ -1307,7 +1325,7 @@ export function CompanyProfile() {
 
           {/* Actions */}
           <div className="flex gap-3 pt-4">
-            <Button onClick={handleSave}><Save className="h-4 w-4 mr-2"/>Save Changes</Button>
+            <Button onClick={handleSave} disabled={isSaving}><Save className="h-4 w-4 mr-2"/>Save Changes</Button>
             <Button variant="outline" onClick={() => setActiveTab('preview')}><Eye className="h-4 w-4 mr-2"/>Preview Profile</Button>
           </div>
         </TabsContent>
