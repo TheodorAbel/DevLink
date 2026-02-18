@@ -43,6 +43,10 @@ DevLink is a modern job marketplace that connects **job seekers** and **employer
   - Email: `lenehod633@alibto.com`
   - Password: `090909`
 
+- **Recruiter (Employer)**
+  - Email: `hotaviv151@alibto.com`
+  - Password: `090909`
+
 ## Getting Started
 
 ### Prerequisites
